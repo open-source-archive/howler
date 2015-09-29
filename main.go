@@ -139,7 +139,7 @@ func readConfig(cf string) {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("unable to read config file: %s", err)
+		log.Fatalf("unable to read config file '%s': %s", cf, err)
 	}
 }
 
@@ -181,7 +181,7 @@ func main() {
 	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", CONSUL_MASTER)
 	datacenters := [...]string{"gth", "itr"}
 
-	readConfig("zmon-connector")
+	readConfig(os.Args[0])
 
 	// get all existing entities from ZMON
 	query := map[string]string{"type": "service"}
