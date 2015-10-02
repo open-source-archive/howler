@@ -1,33 +1,21 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/docopt/docopt-go"
 	"github.com/op/go-logging"
+	"github.com/skoenig/napping"
 	"github.com/spf13/viper"
-	//    "github.com/vrischmann/envconfig"
 )
 
 // @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
-
-/*
-examples for entities:
-id=consul, application_id=consul[techmonkeys], host=gth-consul02, data_center_code=GTH
-
-id=gth-ltm01[Platform/System] host=10.228.116.140 team=Platform/System type=loadbalancer data_center_code=GTH
-gth-gtm01[Platform/System] gtm_listeners data_center_code=GTH host=62.138.84.246 team=Platform/System
-gth-gtm02[Platform/System] gtm_listeners data_center_code=GTH host=62.138.84.254 team=Platform/System
-gth-itm01[Platform/System] gtm_listeners data_center_code=GTH host=10.64.112.8 team=Platform/System
-gth-itm02[Platform/System] gtm_listeners data_center_code=GTH host=10.64.112.9 team=Platform/System
-*/
 
 var usage = fmt.Sprintf(`
 Usage:
@@ -40,6 +28,7 @@ Common Options:
   -h, --help            show this help message and exit
   -v, --verbose         Increase verbosity level (show debug messages)
   -q, --quiet           Decrease verbosity level
+  -o, --onlydelete      Just delelte all matching ZMON entries
   -c CONFIG, --config CONFIG
                         Path to config file
   -l LOG_FILE, --log-file LOG_FILE
@@ -70,59 +59,14 @@ type Node struct {
 }
 
 type ZmonEntity struct {
-	Type           string            `json:"type"`
-	Id             string            `json:"id"`
-	ApplicationID  string            `json:"application_id"`
-	Host           string            `json:"host"`
-	Ports          map[string]string `json:"ports"`
-	DataCenterCode string            `json:"data_center_code"`
+	Type           string         `json:"type"`
+	Id             string         `json:"id"`
+	ApplicationID  string         `json:"application_id"`
+	Host           string         `json:"host"`
+	Ports          map[string]int `json:"ports"`
+	DataCenterCode string         `json:"data_center_code"`
 }
 
-func httpGet(url string) ([]byte, error) {
-
-	req, _ := http.NewRequest("GET", url, nil)
-	req.SetBasicAuth(viper.GetString("user"), viper.GetString("password"))
-
-	body, err := makeRequest(req, url)
-	if err != nil {
-		log.Warning("failed to make GET request to %s", url)
-	}
-	return body, err
-}
-
-func httpPut(url string, data []byte) ([]byte, error) {
-
-	req, _ := http.NewRequest("PUT", url, bytes.NewBuffer(data))
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(viper.GetString("user"), viper.GetString("password"))
-
-	body, err := makeRequest(req, url)
-	if err != nil {
-		log.Warning("failed to make PUT request to %s", url)
-	}
-	return body, err
-}
-
-func httpDelete(url string) ([]byte, error) {
-
-	req, _ := http.NewRequest("DELETE", url, nil)
-	req.SetBasicAuth(viper.GetString("user"), viper.GetString("password"))
-
-	body, err := makeRequest(req, url)
-	if err != nil {
-		log.Warning("failed to make PUT request to %s", url)
-	}
-	return body, err
-}
-
-func makeRequest(req *http.Request, url string) ([]byte, error) {
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	return body, err
-}
 
 func maybeAbort(err error, msg string) {
 	if err != nil {
@@ -148,13 +92,13 @@ func notImplemented(option string) {
 }
 
 func main() {
+	var err error
+	var response *napping.Response
 
 	arguments, err := docopt.Parse(usage, nil, true, fmt.Sprintf("%s 0.1-dev", os.Args[0]), false)
 	if err != nil {
 		panic("Could not parse CLI")
 	}
-
-	log.Debug("log: %+v\n", arguments)
 
 	if arguments["--config"] != nil {
 		notImplemented("--config")
@@ -177,11 +121,15 @@ func main() {
 		logging.SetLevel(logging.WARNING, os.Args[0])
 	}
 
+	readConfig(os.Args[0])
+
 	zmonEntitiesServiceURL := ZMON_HOST + ZMON_URL
 	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", CONSUL_MASTER)
 	datacenters := [...]string{"gth", "itr"}
 
-	readConfig(os.Args[0])
+	s := napping.Session{}
+	s.Userinfo = url.UserPassword(viper.GetString("user"), viper.GetString("password"))
+	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
 
 	// get all existing entities from ZMON
 	query := map[string]string{"type": "service"}
@@ -190,17 +138,25 @@ func main() {
 	existingEntitiesURL := fmt.Sprintf("%s/?query=%s", zmonEntitiesServiceURL, queryString)
 	var existingEntities []ZmonEntity
 
-	response, err := httpGet(existingEntitiesURL)
+	p := napping.Params{"query": string(queryString)}.AsUrlValues()
+	_, err = s.Get(existingEntitiesURL, &p, &existingEntities, nil)
 	maybeAbort(err, "unable to get existing entries from ZMON")
-
-	err = json.Unmarshal(response, &existingEntities)
-	maybeAbort(err, "failed to unmarshal data from "+existingEntitiesURL+" to struct:")
 
 	// delete all the existing entities
 	for _, existingEntity := range existingEntities {
-		response, err := httpDelete(fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.Id))
-		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with id '%s'", existingEntity.Id))
-		log.Debug("response: %+v", string(response))
+		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.Id)
+		log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.Id, deleteURL)
+
+		p = napping.Params{"id": existingEntity.Id}.AsUrlValues()
+		response, err = s.Delete(deleteURL, &p, nil, nil)
+		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with ID '%s'", existingEntity.Id))
+
+		log.Debug("DELETE response (%d): %s", response.Status(), response.RawText())
+	}
+
+	if arguments["--onlydelete"].(bool) {
+		log.Info("Option '--onlydelete' is set, exiting here.")
+		os.Exit(0)
 	}
 
 	for _, datacenter := range datacenters {
@@ -208,11 +164,8 @@ func main() {
 		servicesURL := fmt.Sprintf("%s/services?dc=%s", consulBaseURL, datacenter)
 		var services map[string][]string
 
-		response, err := httpGet(servicesURL)
-		maybeAbort(err, fmt.Sprintf("unavble to get services from Consul for DC '%s'", datacenter))
-
-		err = json.Unmarshal(response, &services)
-		maybeAbort(err, "failed to unmarshal data from "+servicesURL+" to struct:")
+		_, err := s.Get(servicesURL, nil, &services, nil)
+		maybeAbort(err, fmt.Sprintf("unable to get services from Consul for DC '%s'", datacenter))
 
 		for name, tags := range services {
 			log.Info("service name: %s, service tags: %s\n", name, tags)
@@ -220,11 +173,8 @@ func main() {
 			nodesURL := fmt.Sprintf("%s/service/%s?dc=%s", consulBaseURL, name, datacenter)
 			var nodes []Node
 
-			response, err := httpGet(nodesURL)
+			_, err = s.Get(nodesURL, nil, &nodes, nil)
 			maybeAbort(err, fmt.Sprintf("unable to get nodes for service %s from Consul", name))
-
-			err = json.Unmarshal(response, &nodes)
-			maybeAbort(err, fmt.Sprintf("failed to unmarshal data from %s to struct", nodesURL))
 
 			for _, node := range nodes {
 				entity := &ZmonEntity{Type: "service"}
@@ -233,16 +183,16 @@ func main() {
 				entity.DataCenterCode = strings.ToUpper(datacenter)
 				entity.Host = node.ServiceAddress
 				servicePortString := strconv.Itoa(node.ServicePort)
-				entity.Ports = map[string]string{
-					servicePortString: servicePortString,
+				entity.Ports = map[string]int{
+					servicePortString: node.ServicePort,
 				}
 
-				jsonString, err := json.Marshal(entity)
-				maybeAbort(err, "")
-				log.Debug(string(jsonString))
+				log.Debug("about to insert zmonEntity entity via calling '%s'", zmonEntitiesServiceURL)
 
-				response, err := httpPut(zmonEntitiesServiceURL, jsonString)
-				log.Debug("response: %+v", string(response))
+				response, err = s.Put(zmonEntitiesServiceURL, entity, nil, nil)
+				maybeAbort(err, fmt.Sprintf("unable to insert zmonEntity with ID '%s'", entity.Id))
+
+				log.Debug("PUT response (%d): %s", response.Status(), response.RawText())
 			}
 		}
 	}
