@@ -11,8 +11,8 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/op/go-logging"
-	"github.com/skoenig/napping"
 	"github.com/spf13/viper"
+	"github.com/zalando-techmonkeys/napping"
 )
 
 // @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
