@@ -67,23 +67,27 @@ type ZmonEntity struct {
 	DataCenterCode string         `json:"data_center_code"`
 }
 
-
 func maybeAbort(err error, msg string) {
 	if err != nil {
 		log.Fatalf("ERROR: %s %+v", msg, err)
 	}
 }
 
-func readConfig(cf string) {
+func readConfig(cf interface{}) {
+	configFile, ok := cf.(string)
 
-	viper.SetConfigType("yaml")
-	viper.SetConfigName(cf)
-	viper.AddConfigPath("/etc/")
-	viper.AddConfigPath(fmt.Sprintf("%s/.config/", os.ExpandEnv("$HOME")))
-
+	if ok {
+		viper.SetConfigFile(configFile)
+	} else {
+		log.Debug("looking for config file '%s.yaml' in /etc/, ~/.config/", os.Args[0])
+		viper.SetConfigType("yaml")
+		viper.SetConfigName(os.Args[0])
+		viper.AddConfigPath("/etc/")
+		viper.AddConfigPath(fmt.Sprintf("%s/.config/", os.ExpandEnv("$HOME")))
+	}
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("unable to read config file '%s': %s", cf, err)
+		log.Fatalf("unable to read config file '%s': %s", configFile, err)
 	}
 }
 
@@ -100,9 +104,6 @@ func main() {
 		panic("Could not parse CLI")
 	}
 
-	if arguments["--config"] != nil {
-		notImplemented("--config")
-	}
 	if arguments["--log-file"] != nil {
 		notImplemented("--log-file")
 	}
@@ -121,7 +122,7 @@ func main() {
 		logging.SetLevel(logging.WARNING, os.Args[0])
 	}
 
-	readConfig(os.Args[0])
+	readConfig(arguments["--config"])
 
 	zmonEntitiesServiceURL := ZMON_HOST + ZMON_URL
 	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", CONSUL_MASTER)
