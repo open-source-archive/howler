@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,13 @@ import (
 
 // @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
 
+const (
+	ZMON_HOST     = "https://zmon2.zalando.net"
+	ZMON_URL      = "/rest/api/v1/entities/"
+	CONSUL_MASTER = "gth-consul01.zalando"
+)
+
+var NAME = path.Base(os.Args[0])
 var usage = fmt.Sprintf(`
 Usage:
     %s [options]
@@ -38,15 +46,9 @@ Common Options:
   -s SLEEP, --sleep SLEEP
                         Sleep a random time before running
 
-`, os.Args[0])
+`, NAME)
 
-var log, _ = logging.GetLogger(os.Args[0])
-
-const (
-	ZMON_HOST     = "https://zmon2.zalando.net"
-	ZMON_URL      = "/rest/api/v1/entities/"
-	CONSUL_MASTER = "gth-consul01.zalando"
-)
+var log, _ = logging.GetLogger(NAME)
 
 type Node struct {
 	Node           string
@@ -79,9 +81,9 @@ func readConfig(cf interface{}) {
 	if ok {
 		viper.SetConfigFile(configFile)
 	} else {
-		log.Debug("looking for config file '%s.yaml' in /etc/, ~/.config/", os.Args[0])
+		log.Debug("looking for config file '%s.yaml' in /etc/, ~/.config/", NAME)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(os.Args[0])
+		viper.SetConfigName(NAME)
 		viper.AddConfigPath("/etc/")
 		viper.AddConfigPath(fmt.Sprintf("%s/.config/", os.ExpandEnv("$HOME")))
 	}
@@ -99,7 +101,7 @@ func main() {
 	var err error
 	var response *napping.Response
 
-	arguments, err := docopt.Parse(usage, nil, true, fmt.Sprintf("%s 0.1-dev", os.Args[0]), false)
+	arguments, err := docopt.Parse(usage, nil, true, fmt.Sprintf("%s 0.0.2", NAME), false)
 	if err != nil {
 		panic("Could not parse CLI")
 	}
@@ -114,12 +116,12 @@ func main() {
 		notImplemented("--sleep")
 	}
 
-	logging.SetLevel(logging.INFO, os.Args[0])
+	logging.SetLevel(logging.INFO, NAME)
 	if arguments["--verbose"].(bool) {
-		logging.SetLevel(logging.DEBUG, os.Args[0])
+		logging.SetLevel(logging.DEBUG, NAME)
 	}
 	if arguments["--quiet"].(bool) {
-		logging.SetLevel(logging.WARNING, os.Args[0])
+		logging.SetLevel(logging.WARNING, NAME)
 	}
 
 	readConfig(arguments["--config"])
