@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docopt/docopt-go"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"github.com/zalando-techmonkeys/zalando-cli"
 	"gopkg.in/jmcvetta/napping.v3"
 )
 
@@ -31,20 +31,6 @@ Usage:
 
 Options:
     --custom    this is my custom flag
-
-Common Options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Increase verbosity level (show debug messages)
-  -q, --quiet           Decrease verbosity level
-  -o, --onlydelete      Just delelte all matching ZMON entries
-  -c CONFIG, --config CONFIG
-                        Path to config file
-  -l LOG_FILE, --log-file LOG_FILE
-                        Path to log file
-  -L LOCK_FILE, --lock-file LOCK_FILE
-                        Path to lock file
-  -s SLEEP, --sleep SLEEP
-                        Sleep a random time before running
 
 `, NAME)
 
@@ -75,24 +61,6 @@ func maybeAbort(err error, msg string) {
 	}
 }
 
-func readConfig(cf interface{}) {
-	configFile, ok := cf.(string)
-
-	if ok {
-		viper.SetConfigFile(configFile)
-	} else {
-		log.Debug("looking for config file '%s.yaml' in /etc/, ~/.config/", NAME)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(NAME)
-		viper.AddConfigPath("/etc/")
-		viper.AddConfigPath(fmt.Sprintf("%s/.config/", os.ExpandEnv("$HOME")))
-	}
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("unable to read config file '%s': %s", configFile, err)
-	}
-}
-
 func notImplemented(option string) {
 	fmt.Printf("Option %s is not implemented yet.\n", option)
 }
@@ -101,30 +69,7 @@ func main() {
 	var err error
 	var response *napping.Response
 
-	arguments, err := docopt.Parse(usage, nil, true, fmt.Sprintf("%s 0.0.2", NAME), false)
-	if err != nil {
-		panic("Could not parse CLI")
-	}
-
-	if arguments["--log-file"] != nil {
-		notImplemented("--log-file")
-	}
-	if arguments["--lock-file"] != nil {
-		notImplemented("--lock-file")
-	}
-	if arguments["--sleep"] != nil {
-		notImplemented("--sleep")
-	}
-
-	logging.SetLevel(logging.INFO, NAME)
-	if arguments["--verbose"].(bool) {
-		logging.SetLevel(logging.DEBUG, NAME)
-	}
-	if arguments["--quiet"].(bool) {
-		logging.SetLevel(logging.WARNING, NAME)
-	}
-
-	readConfig(arguments["--config"])
+	arguments := cli.Configure(usage)
 
 	zmonEntitiesServiceURL := ZMON_HOST + ZMON_URL
 	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", CONSUL_MASTER)
