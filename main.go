@@ -18,20 +18,21 @@ import (
 // @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
 
 const (
-	ZMON_HOST     = "https://zmon2.zalando.net"
-	ZMON_URL      = "/rest/api/v1/entities/"
-	CONSUL_MASTER = "gth-consul01.zalando"
+	zmonHost     = "https://zmon2.zalando.net"
+	zmonURL      = "/rest/api/v1/entities/"
+	consulMaster = "gth-consul01.zalando"
 )
 
 var (
-	NAME  = path.Base(os.Args[0])
+	binary  = path.Base(os.Args[0])
 	usage = fmt.Sprintf(`
 Usage:
     %s [options]
 
-`, NAME)
+`, binary)
 )
 
+// Node represents a node as it is known in Consul
 type Node struct {
 	Node           string
 	Address        string
@@ -42,9 +43,10 @@ type Node struct {
 	ServicePort    int
 }
 
+// ZmonEntity represents an entity in ZMON
 type ZmonEntity struct {
 	Type           string         `json:"type"`
-	Id             string         `json:"id"`
+	ID             string         `json:"id"`
 	ApplicationID  string         `json:"application_id"`
 	Host           string         `json:"host"`
 	Ports          map[string]int `json:"ports"`
@@ -67,8 +69,8 @@ func main() {
 
 	arguments := cli.Configure(usage)
 
-	zmonEntitiesServiceURL := ZMON_HOST + ZMON_URL
-	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", CONSUL_MASTER)
+	zmonEntitiesServiceURL := zmonHost + zmonURL
+	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", consulMaster)
 	datacenters := [...]string{"gth", "itr"}
 
 	s := napping.Session{}
@@ -89,12 +91,12 @@ func main() {
 	// delete all the existing entities
 	cli.Log.Info("deleting %d existing entities from ZMON", len(existingEntities))
 	for _, existingEntity := range existingEntities {
-		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.Id)
-		cli.Log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.Id, deleteURL)
+		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.ID)
+		cli.Log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.ID, deleteURL)
 
-		p = napping.Params{"id": existingEntity.Id}.AsUrlValues()
+		p = napping.Params{"id": existingEntity.ID}.AsUrlValues()
 		response, err = s.Delete(deleteURL, &p, nil, nil)
-		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with ID '%s'", existingEntity.Id))
+		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with ID '%s'", existingEntity.ID))
 
 		cli.Log.Debug("DELETE response (%d): %s", response.Status(), response.RawText())
 	}
@@ -123,7 +125,7 @@ func main() {
 			cli.Log.Info("syncing service '%s' (tags: %s) with %d nodes\n", name, tags, len(nodes))
 			for _, node := range nodes {
 				entity := &ZmonEntity{Type: "service"}
-				entity.Id = node.ServiceID
+				entity.ID = node.ServiceID
 				entity.ApplicationID = strings.Replace(node.ServiceName, ":", "-", -1) + "[techmonkeys]"
 				entity.DataCenterCode = strings.ToUpper(datacenter)
 				entity.Host = node.ServiceAddress
@@ -135,7 +137,7 @@ func main() {
 				cli.Log.Debug("about to insert zmonEntity entity via calling '%s'", zmonEntitiesServiceURL)
 
 				response, err = s.Put(zmonEntitiesServiceURL, entity, nil, nil)
-				maybeAbort(err, fmt.Sprintf("unable to insert zmonEntity with ID '%s'", entity.Id))
+				maybeAbort(err, fmt.Sprintf("unable to insert zmonEntity with ID '%s'", entity.ID))
 
 				cli.Log.Debug("PUT response (%d): %s", response.Status(), response.RawText())
 			}
