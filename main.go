@@ -91,6 +91,7 @@ func main() {
 	maybeAbort(err, "unable to get existing entries from ZMON")
 
 	// delete all the existing entities
+    log.Info("deleting %d existing entities from ZMON", len(existingEntities))
 	for _, existingEntity := range existingEntities {
 		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.Id)
 		log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.Id, deleteURL)
@@ -116,7 +117,6 @@ func main() {
 		maybeAbort(err, fmt.Sprintf("unable to get services from Consul for DC '%s'", datacenter))
 
 		for name, tags := range services {
-			log.Info("service name: %s, service tags: %s\n", name, tags)
 
 			nodesURL := fmt.Sprintf("%s/service/%s?dc=%s", consulBaseURL, name, datacenter)
 			var nodes []Node
@@ -124,6 +124,7 @@ func main() {
 			_, err = s.Get(nodesURL, nil, &nodes, nil)
 			maybeAbort(err, fmt.Sprintf("unable to get nodes for service %s from Consul", name))
 
+            log.Info("syncing service '%s' (tags: %s) with %d nodes\n", name, tags, len(nodes))
 			for _, node := range nodes {
 				entity := &ZmonEntity{Type: "service"}
 				entity.Id = node.ServiceID
