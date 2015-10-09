@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"github.com/zalando-techmonkeys/zalando-cli"
 	"gopkg.in/jmcvetta/napping.v3"
@@ -24,17 +23,14 @@ const (
 	CONSUL_MASTER = "gth-consul01.zalando"
 )
 
-var NAME = path.Base(os.Args[0])
-var usage = fmt.Sprintf(`
+var (
+	NAME  = path.Base(os.Args[0])
+	usage = fmt.Sprintf(`
 Usage:
     %s [options]
 
-Options:
-    --custom    this is my custom flag
-
 `, NAME)
-
-var log, _ = logging.GetLogger(NAME)
+)
 
 type Node struct {
 	Node           string
@@ -57,7 +53,7 @@ type ZmonEntity struct {
 
 func maybeAbort(err error, msg string) {
 	if err != nil {
-		log.Fatalf("ERROR: %s %+v", msg, err)
+		cli.Log.Fatalf("ERROR: %s %+v", msg, err)
 	}
 }
 
@@ -91,20 +87,20 @@ func main() {
 	maybeAbort(err, "unable to get existing entries from ZMON")
 
 	// delete all the existing entities
-    log.Info("deleting %d existing entities from ZMON", len(existingEntities))
+	cli.Log.Info("deleting %d existing entities from ZMON", len(existingEntities))
 	for _, existingEntity := range existingEntities {
 		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.Id)
-		log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.Id, deleteURL)
+		cli.Log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.Id, deleteURL)
 
 		p = napping.Params{"id": existingEntity.Id}.AsUrlValues()
 		response, err = s.Delete(deleteURL, &p, nil, nil)
 		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with ID '%s'", existingEntity.Id))
 
-		log.Debug("DELETE response (%d): %s", response.Status(), response.RawText())
+		cli.Log.Debug("DELETE response (%d): %s", response.Status(), response.RawText())
 	}
 
 	if arguments["--onlydelete"].(bool) {
-		log.Info("Option '--onlydelete' is set, exiting here.")
+		cli.Log.Info("Option '--onlydelete' is set, exiting here.")
 		os.Exit(0)
 	}
 
@@ -124,7 +120,7 @@ func main() {
 			_, err = s.Get(nodesURL, nil, &nodes, nil)
 			maybeAbort(err, fmt.Sprintf("unable to get nodes for service %s from Consul", name))
 
-            log.Info("syncing service '%s' (tags: %s) with %d nodes\n", name, tags, len(nodes))
+			cli.Log.Info("syncing service '%s' (tags: %s) with %d nodes\n", name, tags, len(nodes))
 			for _, node := range nodes {
 				entity := &ZmonEntity{Type: "service"}
 				entity.Id = node.ServiceID
@@ -136,12 +132,12 @@ func main() {
 					servicePortString: node.ServicePort,
 				}
 
-				log.Debug("about to insert zmonEntity entity via calling '%s'", zmonEntitiesServiceURL)
+				cli.Log.Debug("about to insert zmonEntity entity via calling '%s'", zmonEntitiesServiceURL)
 
 				response, err = s.Put(zmonEntitiesServiceURL, entity, nil, nil)
 				maybeAbort(err, fmt.Sprintf("unable to insert zmonEntity with ID '%s'", entity.Id))
 
-				log.Debug("PUT response (%d): %s", response.Status(), response.RawText())
+				cli.Log.Debug("PUT response (%d): %s", response.Status(), response.RawText())
 			}
 		}
 	}
