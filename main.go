@@ -17,6 +17,8 @@ import (
 
 // @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
 
+const Version = "0.0.1"
+
 const (
 	zmonHost     = "https://zmon2.zalando.net"
 	zmonURL      = "/rest/api/v1/entities/"
@@ -67,7 +69,7 @@ func main() {
 	var err error
 	var response *napping.Response
 
-	arguments := cli.Configure(usage)
+	arguments := cli.Configure(usage, Version)
 
 	zmonEntitiesServiceURL := zmonHost + zmonURL
 	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", consulMaster)
