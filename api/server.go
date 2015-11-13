@@ -69,12 +69,12 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	}
 
 	router.GET("/", rootHandler)
-	//authenticated routes
 	if config.Configuration.Oauth2Enabled {
-		private.GET("/health", health)
+	    //authenticated routes
+		private.GET("/status", getStatus)
 	} else {
 		//non authenticated routes
-		router.GET("/health", health)
+		router.GET("/status", getStatus)
 	}
 
 	// TLS config
@@ -106,5 +106,4 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	}
 	return nil
 }
-
 
