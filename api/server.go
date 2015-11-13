@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
-	"zalando.de/zalando-techmonkeys/pmi-monitoring-connector/conf"
 	"github.com/zalando-techmonkeys/gin-glog"
 	"github.com/zalando-techmonkeys/gin-gomonitor"
 	"github.com/zalando-techmonkeys/gin-gomonitor/aspects"
@@ -17,6 +16,7 @@ import (
 	"github.com/zalando-techmonkeys/gin-oauth2/zalando"
 	"golang.org/x/oauth2"
 	"gopkg.in/mcuadros/go-monitor.v1/aspects"
+	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
 )
 
 type ServerSettings struct {
@@ -82,7 +82,7 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	if config.Configuration.Oauth2Enabled {
 		private.GET("/health", health)
 	} else {
-	//non authenticated routes
+		//non authenticated routes
 		router.GET("/health", health)
 	}
 
