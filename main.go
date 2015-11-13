@@ -1,148 +1,88 @@
 package main
 
 import (
-	"encoding/json"
+	"crypto/tls"
+	"flag"
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
-	"strconv"
-	"strings"
+	"time"
 
-	"github.com/spf13/viper"
-	"github.com/zalando-techmonkeys/zalando-cli"
-	"gopkg.in/jmcvetta/napping.v3"
+	"github.com/golang/glog"
+    "stash.zalando.net/scm/system/pmi-monitoring-connector.git/api"
+    "stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
 )
 
-// @TODO: entity.ApplicationID should be postfixed with team name which owns the service, for now it's just "[techmonkeys]"
+//Buildstamp and Githash are used to set information at build time regarding
+//the version of the build.
+//Buildstamp is used for storing the timestamp of the build
+var Buildstamp string = "Not set"
 
-const Version = "0.0.1"
+//Githash is used for storing the commit hash of the build
+var Githash string = "Not set"
 
-const (
-	zmonHost     = "https://zmon2.zalando.net"
-	zmonURL      = "/rest/api/v1/entities/"
-	consulMaster = "gth-consul01.zalando"
-)
+var serverConfig *conf.Config
 
-var (
-	binary  = path.Base(os.Args[0])
-	usage = fmt.Sprintf(`
-Usage:
-    %s [options]
-
-`, binary)
-)
-
-// Node represents a node as it is known in Consul
-type Node struct {
-	Node           string
-	Address        string
-	ServiceID      string
-	ServiceName    string
-	ServiceTags    []string
-	ServiceAddress string
-	ServicePort    int
-}
-
-// ZmonEntity represents an entity in ZMON
-type ZmonEntity struct {
-	Type           string         `json:"type"`
-	ID             string         `json:"id"`
-	ApplicationID  string         `json:"application_id"`
-	Host           string         `json:"host"`
-	Ports          map[string]int `json:"ports"`
-	DataCenterCode string         `json:"data_center_code"`
-}
-
-func maybeAbort(err error, msg string) {
-	if err != nil {
-		cli.Log.Fatalf("ERROR: %s %+v", msg, err)
+func init() {
+	bin := path.Base(os.Args[0])
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `
+Usage of %s
+================
+Example:
+  %% %s
+`, bin, bin)
+		flag.PrintDefaults()
 	}
-}
-
-func notImplemented(option string) {
-	fmt.Printf("Option %s is not implemented yet.\n", option)
+	serverConfig = conf.New()
+	serverConfig.VersionBuildStamp = Buildstamp
+	serverConfig.VersionGitHash = Githash
+	//config from file is loaded.
+	//the values will be overwritten by command line flags
+	flag.BoolVar(&serverConfig.DebugEnabled, "debug", serverConfig.DebugEnabled, "Enable debug output")
+	flag.BoolVar(&serverConfig.Oauth2Enabled, "oauth", serverConfig.Oauth2Enabled, "Enable OAuth2")
+	flag.BoolVar(&serverConfig.TeamAuthorization, "team-auth", serverConfig.TeamAuthorization, "Enable team based authorization")
+	flag.StringVar(&serverConfig.AuthURL, "oauth-authurl", serverConfig.AuthURL, "OAuth2 Auth URL")
+	flag.StringVar(&serverConfig.TokenURL, "oauth-tokeninfourl", serverConfig.TokenURL, "OAuth2 Auth URL")
+	flag.StringVar(&serverConfig.TlsCertfilePath, "tls-cert", serverConfig.TlsCertfilePath, "TLS Certfile")
+	flag.StringVar(&serverConfig.TlsKeyfilePath, "tls-key", serverConfig.TlsKeyfilePath, "TLS Keyfile")
+	flag.IntVar(&serverConfig.Port, "port", serverConfig.Port, "Listening TCP Port of the service.")
+	if serverConfig.Port == 0 {
+		serverConfig.Port = 1234 //default port when no option is provided
+	}
+	flag.DurationVar(&serverConfig.LogFlushInterval, "flush-interval", time.Second*5, "Interval to flush Logs to disk.")
 }
 
 func main() {
+	flag.Parse()
+
+	// default https, if cert and key are found
 	var err error
-	var response *napping.Response
-
-	arguments := cli.Configure(usage, Version)
-
-	zmonEntitiesServiceURL := zmonHost + zmonURL
-	consulBaseURL := fmt.Sprintf("https://%s:8500/v1/catalog", consulMaster)
-	datacenters := [...]string{"gth", "itr"}
-
-	s := napping.Session{}
-	s.Userinfo = url.UserPassword(viper.GetString("user"), viper.GetString("password"))
-	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
-
-	// get all existing entities from ZMON
-	query := map[string]string{"type": "service"}
-	queryString, _ := json.Marshal(query)
-
-	existingEntitiesURL := fmt.Sprintf("%s/?query=%s", zmonEntitiesServiceURL, queryString)
-	var existingEntities []ZmonEntity
-
-	p := napping.Params{"query": string(queryString)}.AsUrlValues()
-	_, err = s.Get(existingEntitiesURL, &p, &existingEntities, nil)
-	maybeAbort(err, "unable to get existing entries from ZMON")
-
-	// delete all the existing entities
-	cli.Log.Info("deleting %d existing entities from ZMON", len(existingEntities))
-	for _, existingEntity := range existingEntities {
-		deleteURL := fmt.Sprintf("%s/?id=%s", zmonEntitiesServiceURL, existingEntity.ID)
-		cli.Log.Debug("about to delete zmonEntity entity with ID '%s' via calling '%s'", existingEntity.ID, deleteURL)
-
-		p = napping.Params{"id": existingEntity.ID}.AsUrlValues()
-		response, err = s.Delete(deleteURL, &p, nil, nil)
-		maybeAbort(err, fmt.Sprintf("unable to delete zmonEntity with ID '%s'", existingEntity.ID))
-
-		cli.Log.Debug("DELETE response (%d): %s", response.Status(), response.RawText())
+	httpOnly := false
+	if _, err = os.Stat(serverConfig.TlsCertfilePath); os.IsNotExist(err) {
+		glog.Warningf("WARN: No Certfile found %s\n", serverConfig.TlsCertfilePath)
+		httpOnly = true
+	} else if _, err = os.Stat(serverConfig.TlsKeyfilePath); os.IsNotExist(err) {
+		glog.Warningf("WARN: No Keyfile found %s\n", serverConfig.TlsKeyfilePath)
+		httpOnly = true
 	}
-
-	if arguments["--onlydelete"].(bool) {
-		cli.Log.Info("Option '--onlydelete' is set, exiting here.")
-		os.Exit(0)
-	}
-
-	for _, datacenter := range datacenters {
-
-		servicesURL := fmt.Sprintf("%s/services?dc=%s", consulBaseURL, datacenter)
-		var services map[string][]string
-
-		_, err := s.Get(servicesURL, nil, &services, nil)
-		maybeAbort(err, fmt.Sprintf("unable to get services from Consul for DC '%s'", datacenter))
-
-		for name, tags := range services {
-
-			nodesURL := fmt.Sprintf("%s/service/%s?dc=%s", consulBaseURL, name, datacenter)
-			var nodes []Node
-
-			_, err = s.Get(nodesURL, nil, &nodes, nil)
-			maybeAbort(err, fmt.Sprintf("unable to get nodes for service %s from Consul", name))
-
-			cli.Log.Info("syncing service '%s' (tags: %s) with %d nodes\n", name, tags, len(nodes))
-			for _, node := range nodes {
-				entity := &ZmonEntity{Type: "service"}
-				entity.ID = node.ServiceID
-				entity.ApplicationID = strings.Replace(node.ServiceName, ":", "-", -1) + "[techmonkeys]"
-				entity.DataCenterCode = strings.ToUpper(datacenter)
-				entity.Host = node.ServiceAddress
-				servicePortString := strconv.Itoa(node.ServicePort)
-				entity.Ports = map[string]int{
-					servicePortString: node.ServicePort,
-				}
-
-				cli.Log.Debug("about to insert zmonEntity entity via calling '%s'", zmonEntitiesServiceURL)
-
-				response, err = s.Put(zmonEntitiesServiceURL, entity, nil, nil)
-				maybeAbort(err, fmt.Sprintf("unable to insert zmonEntity with ID '%s'", entity.ID))
-
-				cli.Log.Debug("PUT response (%d): %s", response.Status(), response.RawText())
-			}
+	var keypair tls.Certificate
+	if httpOnly {
+		keypair = tls.Certificate{}
+	} else {
+		keypair, err = tls.LoadX509KeyPair(serverConfig.TlsCertfilePath, serverConfig.TlsKeyfilePath)
+		if err != nil {
+			fmt.Printf("ERR: Could not load X509 KeyPair, caused by: %s\n", err)
+			os.Exit(1)
 		}
 	}
+
+	// configure service
+	cfg := api.ServerSettings{
+		Configuration: serverConfig,
+		CertKeyPair:   keypair,
+		Httponly:      httpOnly,
+	}
+	svc := api.Service{}
+	svc.Run(cfg)
 }
