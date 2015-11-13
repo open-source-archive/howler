@@ -61,20 +61,22 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	var private *gin.RouterGroup
 	if config.Configuration.Oauth2Enabled {
 		private = router.Group("")
-    	var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
-	    for i, v := range config.Configuration.AuthorizedUsers {
-    		accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
-    	}
-    	private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
+		var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
+		for i, v := range config.Configuration.AuthorizedUsers {
+			accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
+		}
+		private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
 	}
 
 	router.GET("/", rootHandler)
 	if config.Configuration.Oauth2Enabled {
-	    //authenticated routes
+		//authenticated routes
 		private.GET("/status", getStatus)
+		private.POST("/events", createEvent)
 	} else {
 		//non authenticated routes
 		router.GET("/status", getStatus)
+		router.POST("/events", createEvent)
 	}
 
 	// TLS config
@@ -106,4 +108,3 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	}
 	return nil
 }
-
