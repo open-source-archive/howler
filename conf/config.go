@@ -24,7 +24,6 @@ type Config struct {
 	TlsKeyfilePath    string
 	LogFlushInterval  time.Duration
 	Port              int
-	AuthorizedTeams   []AccessTuple
 	AuthorizedUsers   []AccessTuple
 	VersionBuildStamp string
 	VersionGitHash    string

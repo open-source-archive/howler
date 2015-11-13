@@ -1,14 +1,10 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/golang/glog"
     "stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
 )
@@ -19,6 +15,7 @@ func rootHandler(ginCtx *gin.Context) {
 }
 
 func health(ginCtx *gin.Context) {
+    glog.Info("basic health check, will always return 'OK' for now")
     ginCtx.JSON(http.StatusOK, gin.H{"status": "OK"})
 }
 

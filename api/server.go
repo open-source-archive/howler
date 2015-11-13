@@ -59,22 +59,13 @@ func (svc *Service) Run(cfg ServerSettings) error {
 
 	// OAuth2 secured if conf.Oauth2Enabled is set
 	var private *gin.RouterGroup
-	//ATM team or user auth is mutually exclusive, we have to look for a better solution
 	if config.Configuration.Oauth2Enabled {
 		private = router.Group("")
-		if config.Configuration.TeamAuthorization {
-			var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedTeams))
-			for i, v := range config.Configuration.AuthorizedTeams {
-				accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
-			}
-			private.Use(ginoauth2.Auth(zalando.GroupCheck, oauth2Endpoint))
-		} else {
-			var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
-			for i, v := range config.Configuration.AuthorizedUsers {
-				accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
-			}
-			private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
-		}
+    	var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
+	    for i, v := range config.Configuration.AuthorizedUsers {
+    		accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
+    	}
+    	private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
 	}
 
 	router.GET("/", rootHandler)
@@ -93,9 +84,6 @@ func (svc *Service) Run(cfg ServerSettings) error {
 		tls_config.NextProtos = []string{"http/1.1"}
 		tls_config.Rand = rand.Reader // Strictly not necessary, should be default
 	}
-
-	// run backend
-	Start()
 
 	// run frontend server
 	serve := &http.Server{
@@ -118,3 +106,5 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	}
 	return nil
 }
+
+
