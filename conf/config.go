@@ -65,14 +65,14 @@ func configInit(filename string) (*Config, *ConfigError) {
 	viper.AddConfigPath(fmt.Sprintf("%s/.config/pmi-monitoring-connector", os.ExpandEnv("$HOME")))
 	err := viper.ReadInConfig()
 	if err != nil {
-		fmt.Printf("Can not read config, caused by: %s", err)
-		return nil, &ConfigError{"configuration format is not correct."}
+		fmt.Printf("Can not read config, caused by: %s\n", err)
+		return nil, &ConfigError{"cannot read configuration, something must be wrong."}
 	}
 	var config Config
 	err = viper.Marshal(&config)
 	if err != nil {
-		fmt.Printf("Can not marshal config, caused by: %s", err)
-		return nil, &ConfigError{"cannot read configuration, something must be wrong."}
+		fmt.Printf("Can not marshal config, caused by: %s\n", err)
+		return nil, &ConfigError{"configuration format is not correct."}
 	}
 	return &config, nil
 }
