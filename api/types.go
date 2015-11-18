@@ -4,23 +4,26 @@ import (
 	"time"
 )
 
+type Event struct {
+	Eventtype string    `json:"eventType"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 type ApiRequest struct {
-	Eventtype     string    `json:"eventType"`
-	Timestamp     time.Time `json:"timestamp"`
-	Clientip      string    `json:"clientIp"`
-	URI           string    `json:"uri"`
+	Event
+	Clientip      string `json:"clientIp"`
+	URI           string `json:"uri"`
 	Appdefinition struct {
-		Args           []interface{} `json:"args"`
-		Backofffactor  float64       `json:"backoffFactor"`
-		Backoffseconds int           `json:"backoffSeconds"`
-		Cmd            string        `json:"cmd"`
-		Constraints    []interface{} `json:"constraints"`
-		Container      interface{}   `json:"container"`
-		Cpus           float64       `json:"cpus"`
-		Dependencies   []interface{} `json:"dependencies"`
-		Disk           float64       `json:"disk"`
-		Env            struct {
-		} `json:"env"`
+		Args            []interface{} `json:"args"`
+		Backofffactor   float64       `json:"backoffFactor"`
+		Backoffseconds  int           `json:"backoffSeconds"`
+		Cmd             string        `json:"cmd"`
+		Constraints     []interface{} `json:"constraints"`
+		Container       interface{}   `json:"container"`
+		Cpus            float64       `json:"cpus"`
+		Dependencies    []interface{} `json:"dependencies"`
+		Disk            float64       `json:"disk"`
+		Env             struct{}      `json:"env"`
 		Executor        string        `json:"executor"`
 		Healthchecks    []interface{} `json:"healthChecks"`
 		ID              string        `json:"id"`
@@ -38,8 +41,7 @@ type ApiRequest struct {
 }
 
 type StatusUpdate struct {
-	Eventtype  string    `json:"eventType"`
-	Timestamp  time.Time `json:"timestamp"`
+	Event
 	Slaveid    string    `json:"slaveId"`
 	Taskid     string    `json:"taskId"`
 	Taskstatus string    `json:"taskStatus"`
