@@ -1,18 +1,23 @@
 package backend
 
-import  (
-
+import (
 	"github.com/golang/glog"
+	"github.com/kr/pretty"
 )
 
 type Zmon2 struct {
-    name string
+	name string
 }
 
 func (z Zmon2) Register() (error, Backend) {
-    return nil, Zmon2{"zmon2"}
+	return nil, Zmon2{"zmon2"}
 }
 
-func (z Zmon2) HandleEvent(event Event) {
-    glog.Infof("Backend %s: handling %v\n", z.name, event)
+func (z Zmon2) HandleEvent(event interface{}) {
+	event, ok := event.(StatusUpdateEvent)
+	if !ok {
+		glog.Errorf("Backend %s: unable to handle received event type", z.name)
+		return
+	}
+	glog.Infof("Backend %s: handling %# v", z.name, pretty.Formatter(event))
 }

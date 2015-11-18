@@ -9,7 +9,7 @@ type Event struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-type ApiRequest struct {
+type ApiRequestEvent struct {
 	Event
 	Clientip      string `json:"clientIp"`
 	URI           string `json:"uri"`
@@ -40,7 +40,7 @@ type ApiRequest struct {
 	} `json:"appDefinition"`
 }
 
-type StatusUpdate struct {
+type StatusUpdateEvent struct {
 	Event
 	Slaveid    string    `json:"slaveId"`
 	Taskid     string    `json:"taskId"`

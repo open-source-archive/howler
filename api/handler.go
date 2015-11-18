@@ -1,11 +1,12 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/golang/glog"
 	"github.com/kr/pretty"
 	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/backend"
@@ -13,7 +14,8 @@ import (
 )
 
 var (
-	enabledBackends = []backend.Backend {backend.Zmon2{}}
+	enabledBackends    = []backend.Backend{backend.Zmon2{}}
+	registeredBackends = registerBackends()
 )
 
 func rootHandler(ginCtx *gin.Context) {
@@ -26,46 +28,48 @@ func getStatus(ginCtx *gin.Context) {
 	ginCtx.String(http.StatusOK, "OK")
 }
 
-func dispatchEventType(ginCtx *gin.Context) error
-
 // endpoint for receiving marathon event bus messages
 func createEvent(ginCtx *gin.Context) {
 
-	ginCtx.Request.ParseForm()
-
+	body, _ := ioutil.ReadAll(ginCtx.Request.Body)
 	var event backend.Event
-	ginCtx.BindWith(&event, binding.JSON)
-	glog.Infof("marathon event: %# v", pretty.Formatter(event))
-	glog.Infof("received marathon '%s' event", event.Eventtype)
+	err := json.Unmarshal(body, &event)
+	if err != nil {
+		// @TODO: better error handling
+		glog.Errorf("Unable to decode event body: %s\n", err.Error())
+		return
+	}
+	glog.Infof("received marathon '%s' event: %# v", event.Eventtype, pretty.Formatter(event))
 
-	err, backends := registerBackends()
-	for _, backendImplementation := range backends {
+	for _, backendImplementation := range registeredBackends {
 		// dispatching event types here, @TODO: perhaps there is a more elegant solution...
 		switch event.Eventtype {
 		case "api_post_event":
-			var marathonEvent backend.ApiRequest
-			ginCtx.BindWith(marathonEvent, binding.JSON)
+			var marathonEvent backend.ApiRequestEvent
+			json.Unmarshal(body, &marathonEvent)
 			backendImplementation.HandleEvent(marathonEvent)
 		case "status_update_event":
-			var marathonEvent backend.StatusUpdate
-			ginCtx.BindWith(marathonEvent, binding.JSON)
+			var marathonEvent backend.StatusUpdateEvent
+			json.Unmarshal(body, &marathonEvent)
 			backendImplementation.HandleEvent(marathonEvent)
 		default:
 			glog.Errorf("event type '%s' is not dispatched to any backend", event.Eventtype)
 		}
 	}
 
+	content := gin.H{"result": "Success"}
+	ginCtx.JSON(200, content)
 }
 
-func registerBackends() (error, []backend.Backend) {
+func registerBackends() []backend.Backend {
 
 	var backends []backend.Backend
 	for _, backendImplementation := range enabledBackends {
 		err, backendInstance := backendImplementation.Register()
 		if err != nil {
-			return err, nil
+			glog.Fatalf("unable to register backend %s", backendImplementation)
 		}
 		backends = append(backends, backendInstance)
 	}
-	return nil, backends
+	return backends
 }
