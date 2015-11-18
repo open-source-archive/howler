@@ -8,7 +8,12 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/golang/glog"
 	"github.com/kr/pretty"
+	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/backend"
 	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
+)
+
+var (
+	enabledBackends = []backend.Backend {backend.Zmon2{}}
 )
 
 func rootHandler(ginCtx *gin.Context) {
@@ -27,32 +32,40 @@ func dispatchEventType(ginCtx *gin.Context) error
 func createEvent(ginCtx *gin.Context) {
 
 	ginCtx.Request.ParseForm()
-	var event Event
+
+	var event backend.Event
 	ginCtx.BindWith(&event, binding.JSON)
 	glog.Infof("marathon event: %# v", pretty.Formatter(event))
 	glog.Infof("received marathon '%s' event", event.Eventtype)
 
-	/* backends := registerBackends()
-	   for _, backend := backends {
-	   	// @TODO: dispatch different event types here, perhaps there is a more elegant solution...
-			switch event.Eventtype {
-				"api_post_event":
-					ginCtx.Bindwith(&marathonEvent ApiRequest, binding.JSON)
-					backend.handleEvent(marathonEvent)
-				"status_update_event":
-					ginCtx.Bindwith(&marathonEvent StatusUpdate, binding.JSON)
-					backend.handleEvent(marathonEvent)
-			}
-	   }
-	*/
+	err, backends := registerBackends()
+	for _, backendImplementation := range backends {
+		// dispatching event types here, @TODO: perhaps there is a more elegant solution...
+		switch event.Eventtype {
+		case "api_post_event":
+			var marathonEvent backend.ApiRequest
+			ginCtx.BindWith(marathonEvent, binding.JSON)
+			backendImplementation.HandleEvent(marathonEvent)
+		case "status_update_event":
+			var marathonEvent backend.StatusUpdate
+			ginCtx.BindWith(marathonEvent, binding.JSON)
+			backendImplementation.HandleEvent(marathonEvent)
+		default:
+			glog.Errorf("event type '%s' is not dispatched to any backend", event.Eventtype)
+		}
+	}
 
 }
 
 func registerBackends() (error, []backend.Backend) {
-	/* @TODO load available backends from /backend into an array, then iterate over it:
-	for _, backend := range(backends) {
-		backend.register()
+
+	var backends []backend.Backend
+	for _, backendImplementation := range enabledBackends {
+		err, backendInstance := backendImplementation.Register()
+		if err != nil {
+			return err, nil
+		}
+		backends = append(backends, backendInstance)
 	}
-	return backends
-	*/
+	return nil, backends
 }

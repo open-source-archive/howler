@@ -1,6 +1,6 @@
 package backend
 
 type Backend interface {
-	register()
-	handleEvent()
+	Register() (error, Backend)    // this is for initializing stuff, establishing connections etc.
+	HandleEvent(Event)
 }
