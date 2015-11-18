@@ -65,6 +65,7 @@ func (svc *Service) Run(cfg ServerSettings) error {
 		for i, v := range config.Configuration.AuthorizedUsers {
 			accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
 		}
+		zalando.AccessTuples = accessTuple
 		private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
 	}
 
