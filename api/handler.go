@@ -47,12 +47,13 @@ func createEvent(ginCtx *gin.Context) {
 			ginCtx.Bind(&marathonEvent)
 			backendImplementation.HandleEvent(marathonEvent)
 		default:
-			glog.Errorf("event type '%s' is not dispatched to any backend", EventType)
+			msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", EventType)
+			glog.Errorf(msg)
+			ginCtx.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
 		}
 	}
-
-	content := gin.H{"result": "Success"}
-	ginCtx.JSON(200, content)
+	ginCtx.JSON(http.StatusOK, gin.H{"result": "Success"})
 }
 
 func registerBackends() []backend.Backend {
