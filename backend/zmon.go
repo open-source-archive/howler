@@ -19,5 +19,5 @@ func (z Zmon2) HandleEvent(event interface{}) {
 		glog.Errorf("Backend %s: unable to handle received event type", z.name)
 		return
 	}
-	glog.Infof("Backend %s: handling %# v", z.name, pretty.Formatter(event))
+	glog.Infof("Backend %s: handling event: %# v", z.name, pretty.Formatter(event))
 }
