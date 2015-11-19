@@ -1,0 +1,13 @@
+{
+  "eventType": "add_health_check_event",
+  "timestamp": "2014-03-01T23:29:30.158Z",
+  "appId": "/my-app",
+  "healthCheck": {
+    "protocol": "HTTP",
+    "path": "/health",
+    "portIndex": 0,
+    "gracePeriodSeconds": 5,
+    "intervalSeconds": 10,
+    "timeoutSeconds": 10,
+    "maxConsecutiveFailures": 3
+  }

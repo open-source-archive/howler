@@ -1,0 +1,7 @@
+{
+  "eventType": "framework_message_event",
+  "timestamp": "2014-03-01T23:29:30.158Z",
+  "slaveId": "20140909-054127-177048842-5050-1494-0",
+  "executorId": "my-app.3f80d17a-37e6-11e4-b05e-56847afe9799",
+  "message": "aGVsbG8gd29ybGQh"
+}

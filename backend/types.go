@@ -4,10 +4,15 @@ import (
 	"time"
 )
 
+// Basic type containing only the fields all Marathon events have in common.
 type Event struct {
 	Eventtype string    `json:"eventType"`
 	Timestamp time.Time `json:"timestamp"`
 }
+
+// All following event types are generated with https://mholt.github.io/json-to-go/
+// from Marathon Event Bus docu examples
+// (https://raw.githubusercontent.com/mesosphere/marathon/master/docs/docs/event-bus.md).
 
 type ApiRequestEvent struct {
 	Event
