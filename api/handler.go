@@ -9,14 +9,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/golang/glog"
 	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/backend"
 	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
 )
 
 var (
-	enabledBackends    = []backend.Backend{backend.Zmon2{}}
+	enabledBackends    = []backend.Backend{backend.DummyBackend{}}
 	registeredBackends = registerBackends()
 )
 
