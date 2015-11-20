@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	enabledBackends    = []backend.Backend{backend.DummyBackend{}}
+	enabledBackends    = []backend.Backend{backend.Zmon{}, backend.DummyBackend{}}
 	registeredBackends = registerBackends()
 )
 
@@ -34,24 +34,28 @@ func createEvent(ginCtx *gin.Context) {
 
 	EventType := determineEventType(ginCtx.Request)
 
-	for _, backendImplementation := range registeredBackends {
-		// dispatching event types here, @TODO: perhaps there is a more elegant solution...
+	// dispatching event types here, @TODO: perhaps there is a more elegant solution...
 
-		switch EventType {
-		case "api_post_event":
-			var marathonEvent backend.ApiRequestEvent
-			ginCtx.Bind(&marathonEvent)
+	switch EventType {
+	case "api_post_event":
+		var marathonEvent backend.ApiRequestEvent
+		ginCtx.Bind(&marathonEvent)
+
+		for _, backendImplementation := range registeredBackends {
 			backendImplementation.HandleEvent(marathonEvent)
-		case "status_update_event":
-			var marathonEvent backend.StatusUpdateEvent
-			ginCtx.Bind(&marathonEvent)
-			backendImplementation.HandleEvent(marathonEvent)
-		default:
-			msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", EventType)
-			glog.Errorf(msg)
-			ginCtx.JSON(http.StatusBadRequest, gin.H{"error": msg})
-			return
 		}
+	case "status_update_event":
+		var marathonEvent backend.StatusUpdateEvent
+		ginCtx.Bind(&marathonEvent)
+
+		for _, backendImplementation := range registeredBackends {
+			backendImplementation.HandleEvent(marathonEvent)
+		}
+	default:
+		msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", EventType)
+		glog.Errorf(msg)
+		ginCtx.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
 	}
 	ginCtx.JSON(http.StatusOK, gin.H{"result": "Success"})
 }
