@@ -25,6 +25,7 @@ type Config struct {
 	LogFlushInterval  time.Duration
 	Port              int
 	AuthorizedUsers   []AccessTuple
+	Backends          map[string]map[string]string
 	VersionBuildStamp string
 	VersionGitHash    string
 }

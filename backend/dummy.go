@@ -5,14 +5,12 @@ import (
 	"github.com/kr/pretty"
 )
 
-const name = "dummy"
-
 type DummyBackend struct {
 	name string
 }
 
 func (be DummyBackend) Register() (error, Backend) {
-	return nil, DummyBackend{name: name}
+	return nil, DummyBackend{name: "DummyBackend"}
 }
 
 func (be DummyBackend) HandleEvent(event interface{}) {
