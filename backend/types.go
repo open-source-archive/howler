@@ -1,13 +1,9 @@
 package backend
 
-import (
-	"time"
-)
-
 // Basic type containing only the fields all Marathon events have in common.
 type Event struct {
-	Eventtype string    `json:"eventType"`
-	Timestamp time.Time `json:"timestamp"`
+	Eventtype string `json:"eventType"`
+	Timestamp string `json:"timestamp"`
 }
 
 // All following event types are generated with https://mholt.github.io/json-to-go/
@@ -41,17 +37,17 @@ type ApiRequestEvent struct {
 		} `json:"upgradeStrategy"`
 		Uris    []interface{} `json:"uris"`
 		User    interface{}   `json:"user"`
-		Version time.Time     `json:"version"`
+		Version string        `json:"version"`
 	} `json:"appDefinition"`
 }
 
 type StatusUpdateEvent struct {
 	Event
-	Slaveid    string    `json:"slaveId"`
-	Taskid     string    `json:"taskId"`
-	Taskstatus string    `json:"taskStatus"`
-	Appid      string    `json:"appId"`
-	Host       string    `json:"host"`
-	Ports      []int     `json:"ports"`
-	Version    time.Time `json:"version"`
+	Slaveid    string `json:"slaveId"`
+	Taskid     string `json:"taskId"`
+	Taskstatus string `json:"taskStatus"`
+	Appid      string `json:"appId"`
+	Host       string `json:"host"`
+	Ports      []int  `json:"ports"`
+	Version    string `json:"version"`
 }
