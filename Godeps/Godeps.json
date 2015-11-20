@@ -1,23 +1,11 @@
 {
-	"ImportPath": "github.com/zalando-techmonkeys/chimp",
+	"ImportPath": "stash.zalando.net/scm/system/pmi-monitoring-connector.git",
 	"GoVersion": "go1.5.1",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/BurntSushi/toml",
 			"Comment": "v0.1.0-9-g3883ac1",
 			"Rev": "3883ac1ce943878302255f538fce319d23226223"
-		},
-		{
-			"ImportPath": "github.com/docopt/docopt-go",
-			"Comment": "0.6.1-5-g854c423",
-			"Rev": "854c423c810880e30b9fecdabb12d54f4a92f9bb"
-		},
-		{
-			"ImportPath": "github.com/gambol99/go-marathon",
-			"Rev": "99e5dac1cfc32cafa8171ddd332fb1ec9a8c9159"
 		},
 		{
 			"ImportPath": "github.com/gin-gonic/gin",
@@ -55,14 +43,6 @@
 			"Rev": "281073eb9eb092240d33ef253c404f1cca550309"
 		},
 		{
-			"ImportPath": "github.com/nu7hatch/gouuid",
-			"Rev": "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
-		},
-		{
-			"ImportPath": "github.com/olekukonko/tablewriter",
-			"Rev": "bc39950e081b457853031334b3c8b95cdfe428ba"
-		},
-		{
 			"ImportPath": "github.com/spf13/cast",
 			"Rev": "4d07383ffe94b5e5a6fa3af9211374a4507a0184"
 		},
@@ -79,22 +59,6 @@
 			"Rev": "db7ff930a189b98d602179d9001d33345f42b8c7"
 		},
 		{
-			"ImportPath": "github.com/stretchr/testify/assert",
-			"Rev": "59fc8e570cd707a33a93842b00a9aae4b5cd38b2"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/require",
-			"Rev": "59fc8e570cd707a33a93842b00a9aae4b5cd38b2"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/suite",
-			"Rev": "59fc8e570cd707a33a93842b00a9aae4b5cd38b2"
-		},
-		{
-			"ImportPath": "github.com/vrischmann/envconfig",
-			"Rev": "4650ea1eb6fafc4ae0c008a402c3defcea83766f"
-		},
-		{
 			"ImportPath": "github.com/zalando-techmonkeys/gin-glog",
 			"Rev": "32d578b30825959597e72e829c52211f77254238"
 		},
@@ -109,10 +73,6 @@
 			"Rev": "1075905bf2fa9281ac481ff91c0346cfb4b56939"
 		},
 		{
-			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
-		},
-		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "042ba42fa6633b34205efc66ba5719cd3afd8d38"
 		},
@@ -124,6 +84,11 @@
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
 			"Comment": "v5.12",
 			"Rev": "d5acf1dac43705f8bfbb71d878e290e2bed3950b"
+		},
+		{
+			"ImportPath": "gopkg.in/jmcvetta/napping.v3",
+			"Comment": "v3.0.0",
+			"Rev": "42f89929291aca8ece5ba3ad7549ca5b38f81174"
 		},
 		{
 			"ImportPath": "gopkg.in/mcuadros/go-monitor.v1",
