@@ -45,20 +45,19 @@ func (be Zmon) Register() (error, Backend) {
 
 func (be Zmon) HandleEvent(event interface{}) {
 	glog.Infof("Backend %s: handling event: %# v", be.name, pretty.Formatter(event))
-	event, ok := event.(StatusUpdateEvent)
+	e, ok := event.(StatusUpdateEvent)
 	if !ok {
 		glog.Errorf("Backend %s: unable to handle received event type", be.name)
 		return
-	} else {
-		statusUpdateEvent := event.(StatusUpdateEvent)
-
-		if statusUpdateEvent.Taskstatus == "TASK_RUNNING" {
-			be.insertEntity(statusUpdateEvent)
-		} else if statusUpdateEvent.Taskstatus == "TASK_KILLED" || statusUpdateEvent.Taskstatus == "TASK_LOST" {
-			be.deleteEntity(statusUpdateEvent)
-		}
-		return
 	}
+
+	if e.Taskstatus == "TASK_RUNNING" {
+		be.insertEntity(e)
+	} else if e.Taskstatus == "TASK_KILLED" || e.Taskstatus == "TASK_LOST" {
+		be.deleteEntity(e)
+	}
+	return
+
 }
 
 func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
