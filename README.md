@@ -19,6 +19,7 @@ godep go install  -ldflags "-X main.Buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` 
 
 Create a file `~/.config/howler/config.yaml` or `/etc/howler/config.yaml` with something like this:
 
+```yaml
 ---
 fluentdEnabled: true
 debugEnabled: true
@@ -34,6 +35,7 @@ backends:
         Url: https://foo.net/rest/api/v1/endpoint/
         User: jdoe
         Password: Secr3tP4ss
+```
 
 Configure the "port" on which howler should listen to receive events and configure marathon accordingly:
 
