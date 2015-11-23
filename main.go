@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/api"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
+	"github.com/zalando-techmonkeys/howler/api"
+	"github.com/zalando-techmonkeys/howler/conf"
 )
 
 //Buildstamp and Githash are used to set information at build time regarding

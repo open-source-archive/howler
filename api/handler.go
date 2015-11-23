@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
 	"github.com/kr/pretty"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/backend"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
+	"github.com/zalando-techmonkeys/howler/backend"
+	"github.com/zalando-techmonkeys/howler/conf"
 )
 
 // @TODO make enabledBackends configurable
@@ -24,7 +24,7 @@ var (
 // rootHandler serving "/" which returns build information
 func rootHandler(ginCtx *gin.Context) {
 	config := conf.New()
-	ginCtx.JSON(http.StatusOK, gin.H{"pmi-monitoring-connector": fmt.Sprintf("Build Time: %s - Git Commit Hash: %s", config.VersionBuildStamp, config.VersionGitHash)})
+	ginCtx.JSON(http.StatusOK, gin.H{"howler": fmt.Sprintf("Build Time: %s - Git Commit Hash: %s", config.VersionBuildStamp, config.VersionGitHash)})
 }
 
 // basic health check, will always return 'OK' for now

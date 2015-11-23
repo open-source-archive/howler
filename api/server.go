@@ -16,7 +16,7 @@ import (
 	"github.com/zalando-techmonkeys/gin-oauth2/zalando"
 	"golang.org/x/oauth2"
 	"gopkg.in/mcuadros/go-monitor.v1/aspects"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
+	"github.com/zalando-techmonkeys/howler/conf"
 )
 
 type ServerSettings struct {

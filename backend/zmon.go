@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/glog"
 	"gopkg.in/jmcvetta/napping.v3"
-	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
+	"github.com/zalando-techmonkeys/howler/conf"
 )
 
 type Zmon struct {

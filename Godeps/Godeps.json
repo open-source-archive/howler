@@ -1,5 +1,5 @@
 {
-	"ImportPath": "stash.zalando.net/scm/system/pmi-monitoring-connector.git",
+	"ImportPath": "github.com/zalando-techmonkeys/howler",
 	"GoVersion": "go1.5.1",
 	"Deps": [
 		{

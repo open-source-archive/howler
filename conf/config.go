@@ -57,8 +57,8 @@ func configInit(filename string) (*Config, *ConfigError) {
 	viper := viper.New()
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
-	viper.AddConfigPath("/etc/pmi-monitoring-connector")
-	viper.AddConfigPath(fmt.Sprintf("%s/.config/pmi-monitoring-connector", os.ExpandEnv("$HOME")))
+	viper.AddConfigPath("/etc/howler")
+	viper.AddConfigPath(fmt.Sprintf("%s/.config/howler", os.ExpandEnv("$HOME")))
 	err := viper.ReadInConfig()
 	if err != nil {
 		fmt.Printf("Can not read config, caused by: %s\n", err)
