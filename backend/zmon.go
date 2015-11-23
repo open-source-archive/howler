@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/kr/pretty"
 	"gopkg.in/jmcvetta/napping.v3"
 	"stash.zalando.net/scm/system/pmi-monitoring-connector.git/conf"
 )
@@ -30,6 +29,10 @@ type ZmonEntity struct {
 	DataCenterCode string         `json:"data_center_code"`
 }
 
+func (be Zmon) Name() string {
+	return be.name
+}
+
 func (be Zmon) Register() (error, Backend) {
 
 	backendConfig := conf.New().Backends["zmon"]
@@ -44,7 +47,6 @@ func (be Zmon) Register() (error, Backend) {
 }
 
 func (be Zmon) HandleEvent(event interface{}) {
-	glog.Infof("Backend %s: handling event: %# v", be.name, pretty.Formatter(event))
 	e, ok := event.(StatusUpdateEvent)
 	if !ok {
 		glog.Errorf("Backend %s: unable to handle received event type", be.name)
@@ -57,7 +59,6 @@ func (be Zmon) HandleEvent(event interface{}) {
 		be.deleteEntity(e)
 	}
 	return
-
 }
 
 func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
