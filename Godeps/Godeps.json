@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/zalando-techmonkeys/howler",
-	"GoVersion": "go1.5.1",
+	"GoVersion": "go1.5",
 	"Deps": [
 		{
 			"ImportPath": "github.com/BurntSushi/toml",
@@ -37,6 +37,10 @@
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
 			"Rev": "40e4aedc8fabf8c23e040057540867186712faa5"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
@@ -79,6 +83,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "d4780cd8b5fffdab1cc8ef7a4f9050dc37755847"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
