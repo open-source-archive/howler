@@ -42,7 +42,7 @@ func createEvent(ginCtx *gin.Context) {
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
 		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleEvent(marathonEvent)
+			backendImplementation.HandleCreate(marathonEvent) //FIXME shouldn't this be create? how was this handled?
 		}
 	case "status_update_event":
 		var marathonEvent backend.StatusUpdateEvent
@@ -51,7 +51,16 @@ func createEvent(ginCtx *gin.Context) {
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
 		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleEvent(marathonEvent)
+			backendImplementation.HandleUpdate(marathonEvent)
+		}
+	case "app_terminated_event":
+		var marathonEvent backend.AppTerminatedEvent
+		ginCtx.Bind(&marathonEvent)
+
+		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
+		for _, backendImplementation := range backendconfig.RegisteredBackends {
+			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
+			backendImplementation.HandleDestroy(marathonEvent)
 		}
 	default:
 		msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", eventType)

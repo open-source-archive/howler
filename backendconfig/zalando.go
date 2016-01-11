@@ -3,13 +3,13 @@
 package backendconfig
 
 import (
-	"github.com/golang/glog"
+	"fmt"
+
 	"github.com/zalando-techmonkeys/howler/backend"
-	"github.com/zalando-techmonkeys/howler/zmon"
 )
 
 func init() {
-	glog.Infof("------- REGISTERED ZALANDO\n")
-	enabledBackends := []backend.Backend{zmon.Zmon{}, backend.DummyBackend{}}
+	fmt.Printf("------- REGISTERED ZALANDO BACKEND CONFIG -------\n")
+	enabledBackends := []backend.Backend{backend.Zmon{}, backend.DummyBackend{}}
 	RegisteredBackends = RegisterBackends(enabledBackends)
 }

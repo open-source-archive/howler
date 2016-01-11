@@ -1,4 +1,4 @@
-package zmon
+package backend
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/zalando-techmonkeys/howler/backend"
 	"github.com/zalando-techmonkeys/howler/conf"
 	"gopkg.in/jmcvetta/napping.v3"
 )
@@ -34,7 +33,7 @@ func (be Zmon) Name() string {
 	return be.name
 }
 
-func (be Zmon) Register() (error, backend.Backend) {
+func (be Zmon) Register() (error, Backend) {
 
 	backendConfig := conf.New().Backends["zmon"]
 
@@ -47,22 +46,24 @@ func (be Zmon) Register() (error, backend.Backend) {
 	return nil, Zmon{name: "Zmon", session: s, zmonEntityService: zmonEntityService}
 }
 
-func (be Zmon) HandleEvent(event interface{}) {
-	e, ok := event.(backend.StatusUpdateEvent)
-	if !ok {
-		glog.Errorf("Backend %s: unable to handle received event type", be.name)
-		return
-	}
+func (be Zmon) HandleCreate(e ApiRequestEvent) {
+	//TODO write implementation
+}
 
+func (be Zmon) HandleDestroy(e AppTerminatedEvent) {
+	//TODO write implementation
+}
+
+func (be Zmon) HandleUpdate(e StatusUpdateEvent) {
 	if e.Taskstatus == "TASK_RUNNING" {
 		be.insertEntity(e)
-	} else if e.Taskstatus == "TASK_KILLED" || e.Taskstatus == "TASK_LOST" {
+	} else if e.Taskstatus == "TASK_KILLED" || e.Taskstatus == "TASK_LOST" { //TODO should we add more Taskstatus for when a task is killed?
 		be.deleteEntity(e)
 	}
 	return
 }
 
-func (be Zmon) deleteEntity(e backend.StatusUpdateEvent) error {
+func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
@@ -79,7 +80,7 @@ func (be Zmon) deleteEntity(e backend.StatusUpdateEvent) error {
 	return nil
 }
 
-func (be Zmon) insertEntity(e backend.StatusUpdateEvent) error {
+func (be Zmon) insertEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
