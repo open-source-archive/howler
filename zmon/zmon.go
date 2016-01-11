@@ -1,4 +1,4 @@
-package backend
+package zmon
 
 import (
 	"fmt"
@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"gopkg.in/jmcvetta/napping.v3"
+	"github.com/zalando-techmonkeys/howler/backend"
 	"github.com/zalando-techmonkeys/howler/conf"
+	"gopkg.in/jmcvetta/napping.v3"
 )
 
 type Zmon struct {
@@ -33,7 +34,7 @@ func (be Zmon) Name() string {
 	return be.name
 }
 
-func (be Zmon) Register() (error, Backend) {
+func (be Zmon) Register() (error, backend.Backend) {
 
 	backendConfig := conf.New().Backends["zmon"]
 
@@ -47,7 +48,7 @@ func (be Zmon) Register() (error, Backend) {
 }
 
 func (be Zmon) HandleEvent(event interface{}) {
-	e, ok := event.(StatusUpdateEvent)
+	e, ok := event.(backend.StatusUpdateEvent)
 	if !ok {
 		glog.Errorf("Backend %s: unable to handle received event type", be.name)
 		return
@@ -61,7 +62,7 @@ func (be Zmon) HandleEvent(event interface{}) {
 	return
 }
 
-func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
+func (be Zmon) deleteEntity(e backend.StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
@@ -78,7 +79,7 @@ func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
 	return nil
 }
 
-func (be Zmon) insertEntity(e StatusUpdateEvent) error {
+func (be Zmon) insertEntity(e backend.StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
