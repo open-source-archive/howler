@@ -12,13 +12,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/kr/pretty"
 	"github.com/zalando-techmonkeys/howler/backend"
+	"github.com/zalando-techmonkeys/howler/backendconfig"
 	"github.com/zalando-techmonkeys/howler/conf"
-)
-
-// @TODO make enabledBackends configurable
-var (
-	enabledBackends    = []backend.Backend{backend.Zmon{}, backend.DummyBackend{}}
-	registeredBackends = registerBackends()
 )
 
 // rootHandler serving "/" which returns build information
@@ -45,18 +40,27 @@ func createEvent(ginCtx *gin.Context) {
 		ginCtx.Bind(&marathonEvent)
 
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
-		for _, backendImplementation := range registeredBackends {
+		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleEvent(marathonEvent)
+			backendImplementation.HandleCreate(marathonEvent) //FIXME shouldn't this be create? how was this handled?
 		}
 	case "status_update_event":
 		var marathonEvent backend.StatusUpdateEvent
 		ginCtx.Bind(&marathonEvent)
 
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
-		for _, backendImplementation := range registeredBackends {
+		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleEvent(marathonEvent)
+			backendImplementation.HandleUpdate(marathonEvent)
+		}
+	case "app_terminated_event":
+		var marathonEvent backend.AppTerminatedEvent
+		ginCtx.Bind(&marathonEvent)
+
+		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
+		for _, backendImplementation := range backendconfig.RegisteredBackends {
+			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
+			backendImplementation.HandleDestroy(marathonEvent)
 		}
 	default:
 		msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", eventType)
@@ -65,19 +69,6 @@ func createEvent(ginCtx *gin.Context) {
 		return
 	}
 	ginCtx.JSON(http.StatusOK, gin.H{"result": "Success"})
-}
-
-func registerBackends() []backend.Backend {
-
-	var backends []backend.Backend
-	for _, backendImplementation := range enabledBackends {
-		err, backendInstance := backendImplementation.Register()
-		if err != nil {
-			glog.Fatalf("unable to register backend %s", backendImplementation)
-		}
-		backends = append(backends, backendInstance)
-	}
-	return backends
 }
 
 func determineEventType(r *http.Request) string {

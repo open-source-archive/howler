@@ -51,3 +51,8 @@ type StatusUpdateEvent struct {
 	Ports      []int  `json:"ports"`
 	Version    string `json:"version"`
 }
+
+type AppTerminatedEvent struct {
+	Event
+	Appid string `json:"appId"`
+}

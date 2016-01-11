@@ -16,10 +16,9 @@ func (be DummyBackend) Register() (error, Backend) {
 	return nil, DummyBackend{name: "DummyBackend"}
 }
 
-func (be DummyBackend) HandleEvent(event interface{}) {
-	event, ok := event.(StatusUpdateEvent)
-	if !ok {
-		glog.Errorf("Backend %s: unable to handle received event type", be.name)
-		return
-	}
+func (be DummyBackend) HandleUpdate(e StatusUpdateEvent) {
+	glog.Infof("%+v\n", e)
 }
+
+func (be DummyBackend) HandleCreate(e ApiRequestEvent)     {}
+func (be DummyBackend) HandleDestroy(e AppTerminatedEvent) {}
