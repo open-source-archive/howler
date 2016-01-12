@@ -10,6 +10,6 @@ import (
 
 func init() {
 	fmt.Printf("------- REGISTERED ZALANDO BACKEND CONFIG -------\n")
-	enabledBackends := []backend.Backend{backend.Zmon{}, backend.DummyBackend{}}
+	enabledBackends := []backend.Backend{backend.Zmon{}, backend.DummyBackend{}, backend.Baboon{}}
 	RegisteredBackends = RegisterBackends(enabledBackends)
 }
