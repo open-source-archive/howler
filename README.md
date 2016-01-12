@@ -1,5 +1,7 @@
 # Howler
 
+[![Go Report Card](http://goreportcard.com/badge/zalando-techmonkeys/howler)](http://goreportcard.com/report/zalando-techmonkeys/howler)
+
 Howler is an service which is intended to be an endpoint to receive events from the Marathon Event Bus and process them in arbitrary backends.
 
 ## Install
@@ -54,4 +56,3 @@ To be actually useful, there have to be [backends](./backend) which process the 
 ## License
 
 See [LICENSE](LICENSE) file.
-
