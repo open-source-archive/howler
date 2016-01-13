@@ -17,6 +17,9 @@ godep go install -tags zalando github.com/zalando-techmonkeys/howler/...
 godep go install  -tags zalando -ldflags "-X main.Buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.Githash=`git rev-parse HEAD`"   github.com/zalando-techmonkeys/howler/...
 ```
 
+This should compile the server binary `howler`, which you can put in `/usr/bin/` and start with this [init-script](howler.init.d).
+
+
 ## Config
 
 Create a file `~/.config/howler/config.yaml` or `/etc/howler/config.yaml` with something like this:
@@ -49,6 +52,7 @@ Configure the "port" on which howler should listen to receive events and configu
 To be actually useful, there have to be [backends](./backend) which process the events coming from marathon in some way. All of these backends have to implement `Register()` and `HandleEvent()` to fulfill the [`Backend` interface](backend/backend.go). Have a look on the [dummy backend](backend/dummy.go) to have an example.
 
 ## Development
+
 * Issues: Just create issues on github
 * Enhancements/Bugfixes: Pull requests are welcome
 * get in contact: team-techmonkeys@zalando.de
