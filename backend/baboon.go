@@ -105,26 +105,28 @@ func (be Baboon) destroyPool(e AppTerminatedEvent) {
 	pool := strings.TrimLeft(e.Appid, "/")
 	dcs := strings.Split(be.datacenter, ",")
 	token := be.getToken()
-	be.session.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	for i := range dcs {
 		// needs to be more general -ltm is hardcoded which is not so great
-		baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools/%s", be.f5PoolService, dcs[i], pool)
-		fmt.Println(baboonEndpoint)
-		u, err := url.Parse(baboonEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-		}
-		glog.Infof("about to remove F5 pool entity with AppID '%s' via calling '%s'", e.Appid, baboonEndpoint)
+		go func(i int) {
+			baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools/%s", be.f5PoolService, dcs[i], pool)
+			fmt.Println(baboonEndpoint)
+			u, err := url.Parse(baboonEndpoint)
+			if err != nil {
+				glog.Errorf("unable to parse rawurl, reason %s", err)
+			}
+			glog.Infof("about to remove F5 pool entity with AppID '%s' via calling '%s'", e.Appid, baboonEndpoint)
 
-		response, err = be.session.Delete(u.String(), nil, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to remove pool '%s'", pool)
-		}
-		glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+			response, err = be.session.Delete(u.String(), nil, nil, nil)
+			if err != nil {
+				glog.Errorf("unable to remove pool '%s'", pool)
+			}
+			glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+		}(i)
 	}
 }
 
-// createPoolMember calls baboon
+// createPool calls baboon
 func (be Baboon) createPool(e ApiRequestEvent) {
 	var (
 		response *napping.Response
@@ -133,23 +135,25 @@ func (be Baboon) createPool(e ApiRequestEvent) {
 	pool := strings.TrimLeft(e.Appdefinition.ID, "/")
 	dcs := strings.Split(be.datacenter, ",")
 	token := be.getToken()
-	be.session.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	payload := addPool{Name: pool, Monitor: "tcp"}
 	for i := range dcs {
 		// needs to be more general -ltm is hardcoded which is not so great
-		baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools", be.f5PoolService, dcs[i])
-		fmt.Println(baboonEndpoint)
-		u, err := url.Parse(baboonEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-		}
-		glog.Infof("about to add F5 pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonEndpoint)
+		go func(i int) {
+			baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools", be.f5PoolService, dcs[i])
+			fmt.Println(baboonEndpoint)
+			u, err := url.Parse(baboonEndpoint)
+			if err != nil {
+				glog.Errorf("unable to parse rawurl, reason %s", err)
+			}
+			glog.Infof("about to add F5 pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonEndpoint)
 
-		response, err = be.session.Post(u.String(), payload, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to add pool '%s'", pool)
-		}
-		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+			response, err = be.session.Post(u.String(), payload, nil, nil)
+			if err != nil {
+				glog.Errorf("unable to add pool '%s'", pool)
+			}
+			glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+		}(i)
 	}
 }
 
@@ -187,7 +191,7 @@ func (be Baboon) modifyPoolMember(e StatusUpdateEvent) {
 	switch {
 	case e.Taskstatus == "TASK_RUNNING":
 		entity.Type = "Add pool member"
-		be.session.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+		be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 		response, err = be.session.Post(u.String(), addPoolMember{Name: entity.PoolMember,
 			Description: entity.PoolMemberDescription}, nil, nil)
 		if err != nil {
@@ -209,7 +213,7 @@ func (be Baboon) modifyPoolMember(e StatusUpdateEvent) {
 			glog.Errorf("unable make a new request, reason: %s", err)
 		}
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Content-Type", "application/json")
 		c := &http.Client{}
 		rsp, err := c.Do(req)
 		defer rsp.Body.Close()
