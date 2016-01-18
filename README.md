@@ -49,7 +49,12 @@ Configure the "port" on which howler should listen to receive events and configu
 
 ## Developement
 
-To be actually useful, there have to be [backends](./backend) which process the events coming from marathon in some way. All of these backends have to implement `Register()` and `HandleEvent()` to fulfill the [`Backend` interface](backend/backend.go). Have a look on the [dummy backend](backend/dummy.go) to have an example.
+To be actually useful, there have to be [backends](./backend) which process the events coming from marathon in some way. All of these backends have to fulfill the [`Backend` interface](backend/backend.go). Following Marathon event types are currently dispatched and processed by the respective methods:
+- [api_post_event](http://mesosphere.github.io/marathon/docs/event-bus.html#api-request), handled by `HandleCreate()`
+- [status_update_event](http://mesosphere.github.io/marathon/docs/event-bus.html#status-update), handled by `HandleUpdate()`
+- [app_terminated_event](https://github.com/mesosphere/marathon/issues/1530), handled by `HandleDestroy()`
+
+Have a look on the [dummy backend](backend/dummy.go) for an example.
 
 ## Development
 
