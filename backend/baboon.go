@@ -13,18 +13,18 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 )
 
+// Baboon is the basic type
 type Baboon struct {
-	name          string
-	session       *napping.Session
-	f5PoolService string
-	tokenFile     string
-	domain        string
-	datacenter    string
+	config  map[string]string
+	session *napping.Session
 }
 
-type BaboonService struct {
+// LTMPoolService is the basic pool type
+// to create/modify/delete pools and members
+type LTMPoolService struct {
 	Type                  string
 	Pool                  string
 	Loadbalancer          string
@@ -33,46 +33,83 @@ type BaboonService struct {
 	Ports                 map[int]int
 }
 
+// BaboonToken inherits the token
+// to call baboon-proxy
 type BaboonToken struct {
 	Token string `json:"token"`
 }
 
-type addPoolMember struct {
+// addLTMPoolMember inherits fields
+// to add a member in a pool LTM
+type addLTMPoolMember struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
-type deletePoolMember struct {
+// addLTMPoolMember inherits fields
+// to add a member in a pool LTM
+type deleteLTMPoolMember struct {
 	Name string `json:"name"`
 }
 
-type addPool struct {
-	Name      string          `json:"name"`
-	Partition string          `json:"partition"`
-	Members   []addPoolMember `json:"members"`
-	Monitor   string          `json:"monitor"`
+// addLTMPool inherits fields
+// to add a pool LTM
+type addLTMPool struct {
+	Name      string             `json:"name"`
+	Partition string             `json:"partition"`
+	Members   []addLTMPoolMember `json:"members"`
+	Monitor   string             `json:"monitor"`
 }
 
+// addGTMPool inherits fields
+// to add a pool GTM
+type addGTMPool struct {
+	Name    string             `json:"name"`
+	Members []addGTMPoolMember `json:"members"`
+	Monitor string             `json:"monitor"`
+}
+
+// addGTMWideip inherits fields
+// to add a wideip GTM
+type addGTMWideip struct {
+	Name       string             `json:"name"`
+	Pools      []addGTMWideIPPool `json:"pools"`
+	PoolLBMode string             `json:"poolLBMode"`
+}
+
+// addGTMWideIPPool inherits fields
+// to add a pool in a wideip GTM
+type addGTMWideIPPool struct {
+	Name string `json:"name"`
+}
+
+// addGTMPoolMember inherits fields
+// to add a member in a pool GTM
+type addGTMPoolMember struct {
+	Name         string `json:"name"`
+	Loadbalancer string `json:"loadbalancer"`
+}
+
+//Name returns the backend service name
 func (be Baboon) Name() string {
-	return be.name
+	return be.config["name"]
 }
 
+// Register reads backend config for baboon
 func (be Baboon) Register() (error, Backend) {
-
-	backendConfig := conf.New().Backends["baboon"]
+	config := conf.New().Backends["baboon"]
+	glog.Infof("%+v", config)
+	glog.Infof("%s", config["tokenFile"])
 	s := napping.Session{}
 	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
-
-	f5PoolService := backendConfig["entityService"]
-
-	return nil, Baboon{name: "baboon", session: &s, f5PoolService: f5PoolService,
-		tokenFile: backendConfig["tokenFile"], domain: backendConfig["domain"],
-		datacenter: backendConfig["datacenter"]}
+	backendConfig := &Baboon{config: config, session: &s}
+	return nil, backendConfig
 }
 
+// getToken reads from tokenFile
 func (be Baboon) getToken() string {
 	var bt BaboonToken
-	r, err := ioutil.ReadFile(be.tokenFile)
+	r, err := ioutil.ReadFile(be.config["tokenFile"])
 	if err != nil {
 		glog.Errorf("can't open file, reason: %s", err)
 	}
@@ -97,120 +134,220 @@ func (be Baboon) HandleDestroy(e AppTerminatedEvent) {
 	be.destroyPool(e)
 }
 
-// destroyPoolMember calls baboon
+// destroyPool calls baboon
 func (be Baboon) destroyPool(e AppTerminatedEvent) {
 	var (
 		response *napping.Response
+		wait     sync.WaitGroup
 	)
-	pool := strings.TrimLeft(e.Appid, "/")
-	dcs := strings.Split(be.datacenter, ",")
+	appName := strings.TrimLeft(e.Appid, "/")
+	poolName := fmt.Sprintf("%s%s", be.config["ltmPoolPrefix"], appName)
+	loadbalancerSlice := strings.Split(be.config["loadbalancer"], ",")
 	token := be.getToken()
 	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	for i := range dcs {
-		// needs to be more general -ltm is hardcoded which is not so great
+	wait.Add(len(loadbalancerSlice))
+	for i := range loadbalancerSlice {
 		go func(i int) {
-			baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools/%s", be.f5PoolService, dcs[i], pool)
+			defer wait.Done()
+			baboonEndpoint := fmt.Sprintf("%s%s/pools/%s",
+				be.config["entityLTMService"], loadbalancerSlice[i], poolName)
 			fmt.Println(baboonEndpoint)
 			u, err := url.Parse(baboonEndpoint)
 			if err != nil {
 				glog.Errorf("unable to parse rawurl, reason %s", err)
+				return
 			}
 			glog.Infof("about to remove F5 pool entity with AppID '%s' via calling '%s'", e.Appid, baboonEndpoint)
 
 			response, err = be.session.Delete(u.String(), nil, nil, nil)
 			if err != nil {
-				glog.Errorf("unable to remove pool '%s'", pool)
+				glog.Errorf("unable to remove pool '%s'", poolName)
+				return
 			}
 			glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
 		}(i)
 	}
+	wait.Wait()
+	go func() {
+		baboonGTMEndpoint := fmt.Sprintf("%s%s/pools/%s",
+			be.config["entityGTMService"], be.config["trafficManager"], poolName)
+		u, err := url.Parse(baboonGTMEndpoint)
+		if err != nil {
+			glog.Errorf("unable to parse rawurl, reason %s", err)
+			return
+		}
+		glog.Infof("about to delete F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
+
+		response, err = be.session.Delete(u.String(), nil, nil, nil)
+		if err != nil {
+			glog.Errorf("unable to add GTM pool '%s'", poolName)
+			return
+		}
+		glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+		baboonGTMEndpoint = fmt.Sprintf("%s%s/wideips/%s.%s",
+			be.config["entityGTMService"], be.config["trafficManager"], appName, be.config["gtmDomain"])
+		u, err = url.Parse(baboonGTMEndpoint)
+		if err != nil {
+			glog.Errorf("unable to parse rawurl, reason %s", err)
+			return
+		}
+		glog.Infof("about to delete F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
+
+		response, err = be.session.Delete(u.String(), nil, nil, nil)
+		if err != nil {
+			glog.Errorf("unable to delete GTM wideip '%s.%s'", appName, be.config["gtmDomain"])
+			return
+		}
+		glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+	}()
 }
 
 // createPool calls baboon
 func (be Baboon) createPool(e ApiRequestEvent) {
 	var (
 		response *napping.Response
+		wait     sync.WaitGroup
 	)
 
-	pool := strings.TrimLeft(e.Appdefinition.ID, "/")
-	dcs := strings.Split(be.datacenter, ",")
+	appName := strings.TrimLeft(e.Appdefinition.ID, "/")
+	poolName := fmt.Sprintf("%s%s", be.config["ltmPoolPrefix"], appName)
+	loadbalancerSlice := strings.Split(be.config["loadbalancer"], ",")
+	virtualServerSlice := strings.Split(be.config["virtualServer"], ",")
+	fmt.Println(loadbalancerSlice)
 	token := be.getToken()
 	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	payload := addPool{Name: pool, Monitor: "tcp"}
-	for i := range dcs {
-		// needs to be more general -ltm is hardcoded which is not so great
+	payloadLTM := addLTMPool{Name: poolName, Monitor: be.config["ltmPoolMonitor"]}
+	payloadGTMPool := addGTMPool{}
+	payloadGTMPool.Name = poolName
+	payloadGTMPool.Monitor = be.config["gtmPoolMonitor"]
+	for i := range loadbalancerSlice {
+		payloadGTMPool.Members = append(payloadGTMPool.Members, addGTMPoolMember{
+			Name: virtualServerSlice[i], Loadbalancer: loadbalancerSlice[i],
+		})
+	}
+	payloadGTMWideip := addGTMWideip{}
+	payloadGTMWideip.Name = fmt.Sprintf("%s.%s", appName, be.config["gtmDomain"])
+	payloadGTMWideip.Pools = append(payloadGTMWideip.Pools, addGTMWideIPPool{Name: poolName})
+	payloadGTMWideip.PoolLBMode = be.config["gtmWideipMonitor"]
+
+	wait.Add(len(loadbalancerSlice))
+	for i := range loadbalancerSlice {
 		go func(i int) {
-			baboonEndpoint := fmt.Sprintf("%s%s-ltm/pools", be.f5PoolService, dcs[i])
-			fmt.Println(baboonEndpoint)
-			u, err := url.Parse(baboonEndpoint)
+			defer wait.Done()
+			baboonLTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityLTMService"], loadbalancerSlice[i])
+			u, err := url.Parse(baboonLTMEndpoint)
 			if err != nil {
 				glog.Errorf("unable to parse rawurl, reason %s", err)
+				return
 			}
-			glog.Infof("about to add F5 pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonEndpoint)
+			glog.Infof("about to add F5 LTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonLTMEndpoint)
 
-			response, err = be.session.Post(u.String(), payload, nil, nil)
+			response, err = be.session.Post(u.String(), payloadLTM, nil, nil)
 			if err != nil {
-				glog.Errorf("unable to add pool '%s'", pool)
+				glog.Errorf("unable to add LTM pool '%s'", poolName)
+				return
 			}
 			glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
 		}(i)
 	}
+	wait.Wait()
+	go func() {
+		baboonGTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityGTMService"],
+			be.config["trafficManager"])
+		u, err := url.Parse(baboonGTMEndpoint)
+		if err != nil {
+			glog.Errorf("unable to parse rawurl, reason %s", err)
+			return
+		}
+		glog.Infof("about to add F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
+
+		response, err = be.session.Post(u.String(), payloadGTMPool, nil, nil)
+		if err != nil {
+			glog.Errorf("unable to add GTM pool '%s'", poolName)
+			return
+		}
+		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+		baboonGTMEndpoint = fmt.Sprintf("%s%s/wideips", be.config["entityGTMService"],
+			be.config["trafficManager"])
+		u, err = url.Parse(baboonGTMEndpoint)
+		if err != nil {
+			glog.Errorf("unable to parse rawurl, reason %s", err)
+			return
+		}
+		glog.Infof("about to add F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
+
+		response, err = be.session.Post(u.String(), payloadGTMWideip, nil, nil)
+		if err != nil {
+			glog.Errorf("unable to create GTM wideip '%s'")
+			return
+		}
+		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+	}()
 }
 
 // modifyPoolMember calls baboon
 func (be Baboon) modifyPoolMember(e StatusUpdateEvent) {
 	var (
 		response *napping.Response
-		entity   BaboonService
+		entity   LTMPoolService
 	)
 	entity.Ports = make(map[int]int)
 	for i, port := range e.Ports {
 		entity.Ports[i] = port
 	}
 
-	entity.Pool = strings.TrimLeft(e.Appid, "/")
+	entity.Pool = fmt.Sprintf("%s%s",
+		be.config["ltmPoolPrefix"], strings.TrimLeft(e.Appid, "/"))
 	dc := strings.Split(e.Host, "-")[0]
 	entity.Loadbalancer = fmt.Sprintf("%s-ltm", dc)
 
 	host := strings.Split(e.Host, ".")[0]
-	host = fmt.Sprintf("%s.%s", host, be.domain)
+	host = fmt.Sprintf("%s.%s", host, be.config["domain"])
 	ip, err := net.LookupHost(host)
 	if err != nil {
 		glog.Errorf("unable to lookup host %s", host)
+		return
 	}
 	entity.PoolMember = fmt.Sprintf("%s:%s", ip[0], strconv.Itoa(entity.Ports[0]))
 
 	token := be.getToken()
-	be.f5PoolService = fmt.Sprintf("%s%s/pools/%s/members", be.f5PoolService, entity.Loadbalancer, entity.Pool)
-	u, err := url.Parse(be.f5PoolService)
+	urlLTMMembers := fmt.Sprintf("%s%s/pools/%s/members", be.config["entityLTMService"],
+		entity.Loadbalancer, entity.Pool)
+	u, err := url.Parse(urlLTMMembers)
 	if err != nil {
 		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
 	}
-	glog.Infof("about to modify F5 pool member entity with TaskID '%s' via calling '%s'", e.Taskid, be.f5PoolService)
+	glog.Infof("about to modify F5 pool member entity with TaskID '%s' via calling '%s'",
+		e.Taskid, u.String())
 
 	switch {
 	case e.Taskstatus == "TASK_RUNNING":
 		entity.Type = "Add pool member"
 		be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-		response, err = be.session.Post(u.String(), addPoolMember{Name: entity.PoolMember,
+		response, err = be.session.Post(u.String(), addLTMPoolMember{Name: entity.PoolMember,
 			Description: entity.PoolMemberDescription}, nil, nil)
 		if err != nil {
 			glog.Errorf("unable to add pool member '%s', reason: %s", entity.PoolMember, err)
+			return
 		}
 		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
 	case e.Taskstatus == "TASK_KILLED":
 		// napping doesn't support payload for DELETE methods
 		// using plain http client to delete pool member
 		entity.Type = "Delete pool member"
-		payload := deletePoolMember{Name: entity.PoolMember}
+		payload := deleteLTMPoolMember{Name: entity.PoolMember}
 		buf, err := json.Marshal(payload)
 		if err != nil {
 			glog.Errorf("can not marshal entity, reason %s", err)
+			return
 		}
 
-		req, err := http.NewRequest("DELETE", be.f5PoolService, bytes.NewBuffer(buf)) // <-- URL-encoded payload
+		req, err := http.NewRequest("DELETE", u.String(),
+			bytes.NewBuffer(buf)) // <-- URL-encoded payload
 		if err != nil {
 			glog.Errorf("unable make a new request, reason: %s", err)
+			return
 		}
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 		req.Header.Set("Content-Type", "application/json")
@@ -219,10 +356,12 @@ func (be Baboon) modifyPoolMember(e StatusUpdateEvent) {
 		defer rsp.Body.Close()
 		if err != nil {
 			glog.Errorf("unable to remove pool member '%s'", entity.PoolMember)
+			return
 		}
 		body, err := ioutil.ReadAll(rsp.Body)
 		if err != nil {
 			glog.Errorf("unable to read response body, reason %s", err)
+			return
 		}
 		glog.Infof("DELETE response (%s): %s", rsp.Status, string(body))
 	default:
