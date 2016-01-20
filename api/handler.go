@@ -28,6 +28,7 @@ func getStatus(ginCtx *gin.Context) {
 }
 
 // endpoint for receiving marathon event bus messages
+// Plugins will get notified in a goroutine.
 func createEvent(ginCtx *gin.Context) {
 
 	eventType := determineEventType(ginCtx.Request)
@@ -42,7 +43,7 @@ func createEvent(ginCtx *gin.Context) {
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
 		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleCreate(marathonEvent) //FIXME shouldn't this be create? how was this handled?
+			go backendImplementation.HandleCreate(marathonEvent)
 		}
 	case "status_update_event":
 		var marathonEvent backend.StatusUpdateEvent
@@ -51,7 +52,7 @@ func createEvent(ginCtx *gin.Context) {
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
 		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleUpdate(marathonEvent)
+			go backendImplementation.HandleUpdate(marathonEvent)
 		}
 	case "app_terminated_event":
 		var marathonEvent backend.AppTerminatedEvent
@@ -60,7 +61,7 @@ func createEvent(ginCtx *gin.Context) {
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))
 		for _, backendImplementation := range backendconfig.RegisteredBackends {
 			glog.Infof("dispatching event to backend '%s'", backendImplementation.Name())
-			backendImplementation.HandleDestroy(marathonEvent)
+			go backendImplementation.HandleDestroy(marathonEvent)
 		}
 	default:
 		msg := fmt.Sprintf("event type '%s' is not dispatched to any backend", eventType)
@@ -68,7 +69,6 @@ func createEvent(ginCtx *gin.Context) {
 		ginCtx.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
-	ginCtx.JSON(http.StatusOK, gin.H{"result": "Success"})
 }
 
 func determineEventType(r *http.Request) string {
