@@ -121,21 +121,21 @@ func (be Baboon) getToken() string {
 
 // HandleUpdate adds or removes container to loadbalancer pool
 func (be Baboon) HandleUpdate(e StatusUpdateEvent) {
-	be.modifyPoolMember(e)
+	be.modify(e)
 }
 
-// HandleCreate creates new loadbalancer pools
+// HandleCreate creates new LTM pools, GTM pools and GTM wideip
 func (be Baboon) HandleCreate(e ApiRequestEvent) {
-	be.createPool(e)
+	be.create(e)
 }
 
-// HandleDestroy deletes loadbalancer pools
+// HandleDestroy deletes LTM pools, GTM pools and GTM wideip
 func (be Baboon) HandleDestroy(e AppTerminatedEvent) {
-	be.destroyPool(e)
+	be.destroy(e)
 }
 
-// destroyPool calls baboon
-func (be Baboon) destroyPool(e AppTerminatedEvent) {
+// destroy calls baboon-proxy to destroy LTM pools, GTM pool and GTM wideip
+func (be Baboon) destroy(e AppTerminatedEvent) {
 	var (
 		response *napping.Response
 		wait     sync.WaitGroup
@@ -147,63 +147,68 @@ func (be Baboon) destroyPool(e AppTerminatedEvent) {
 	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	wait.Add(len(loadbalancerSlice))
 	for i := range loadbalancerSlice {
-		go func(i int) {
-			defer wait.Done()
-			baboonEndpoint := fmt.Sprintf("%s%s/pools/%s",
-				be.config["entityLTMService"], loadbalancerSlice[i], poolName)
-			fmt.Println(baboonEndpoint)
-			u, err := url.Parse(baboonEndpoint)
-			if err != nil {
-				glog.Errorf("unable to parse rawurl, reason %s", err)
-				return
-			}
-			glog.Infof("about to remove F5 pool entity with AppID '%s' via calling '%s'", e.Appid, baboonEndpoint)
-
-			response, err = be.session.Delete(u.String(), nil, nil, nil)
-			if err != nil {
-				glog.Errorf("unable to remove pool '%s'", poolName)
-				return
-			}
-			glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
-		}(i)
+		// running multiple go routines to delete LTM pools concurrently
+		// otherwise it's to slow waiting for each LTM
+		go be.destroyLTMPool(loadbalancerSlice[i], e, poolName, &wait)
 	}
+	// wait for destroying all LTM pools
 	wait.Wait()
-	go func() {
-		baboonGTMEndpoint := fmt.Sprintf("%s%s/pools/%s",
-			be.config["entityGTMService"], be.config["trafficManager"], poolName)
-		u, err := url.Parse(baboonGTMEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-			return
-		}
-		glog.Infof("about to delete F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
+	// calls baboon-proxy to delete GTM wideip and pool
+	baboonGTMEndpoint := fmt.Sprintf("%s%s/wideips/%s.%s",
+		be.config["entityGTMService"], be.config["trafficManager"], appName, be.config["gtmDomain"])
+	u, err := url.Parse(baboonGTMEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to delete F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
 
-		response, err = be.session.Delete(u.String(), nil, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to add GTM pool '%s'", poolName)
-			return
-		}
-		glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
-		baboonGTMEndpoint = fmt.Sprintf("%s%s/wideips/%s.%s",
-			be.config["entityGTMService"], be.config["trafficManager"], appName, be.config["gtmDomain"])
-		u, err = url.Parse(baboonGTMEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-			return
-		}
-		glog.Infof("about to delete F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
+	response, err = be.session.Delete(u.String(), nil, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to delete GTM wideip '%s.%s'", appName, be.config["gtmDomain"])
+		return
+	}
+	glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+	baboonGTMEndpoint = fmt.Sprintf("%s%s/pools/%s",
+		be.config["entityGTMService"], be.config["trafficManager"], poolName)
+	u, err = url.Parse(baboonGTMEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to delete F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appid, baboonGTMEndpoint)
 
-		response, err = be.session.Delete(u.String(), nil, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to delete GTM wideip '%s.%s'", appName, be.config["gtmDomain"])
-			return
-		}
-		glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
-	}()
+	response, err = be.session.Delete(u.String(), nil, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to add GTM pool '%s'", poolName)
+		return
+	}
+	glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
 }
 
-// createPool calls baboon
-func (be Baboon) createPool(e ApiRequestEvent) {
+// destroyLTMPool calls baboon-proxy destroying all pools in all DCs concurrently
+func (be Baboon) destroyLTMPool(loadbalancer string, e AppTerminatedEvent, poolName string, wait *sync.WaitGroup) {
+	defer wait.Done()
+	baboonEndpoint := fmt.Sprintf("%s%s/pools/%s",
+		be.config["entityLTMService"], loadbalancer, poolName)
+	u, err := url.Parse(baboonEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to remove F5 pool entity with AppID '%s' via calling '%s'", e.Appid, baboonEndpoint)
+
+	response, err := be.session.Delete(u.String(), nil, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to remove pool '%s'", poolName)
+		return
+	}
+	glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
+	return
+}
+
+// create calls baboon-proxy to create LTM pools, GTM pool and GTM wideip
+func (be Baboon) create(e ApiRequestEvent) {
 	var (
 		response *napping.Response
 		wait     sync.WaitGroup
@@ -232,61 +237,68 @@ func (be Baboon) createPool(e ApiRequestEvent) {
 
 	wait.Add(len(loadbalancerSlice))
 	for i := range loadbalancerSlice {
-		go func(i int) {
-			defer wait.Done()
-			baboonLTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityLTMService"], loadbalancerSlice[i])
-			u, err := url.Parse(baboonLTMEndpoint)
-			if err != nil {
-				glog.Errorf("unable to parse rawurl, reason %s", err)
-				return
-			}
-			glog.Infof("about to add F5 LTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonLTMEndpoint)
-
-			response, err = be.session.Post(u.String(), payloadLTM, nil, nil)
-			if err != nil {
-				glog.Errorf("unable to add LTM pool '%s'", poolName)
-				return
-			}
-			glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
-		}(i)
+		// running multiple go routines to create LTM pools concurrently
+		// otherwise it's to slow for incoming status_update_events
+		// LTM pool members can only be modified if the LTM pool already exists
+		go be.createLTMPool(loadbalancerSlice[i], e, poolName, payloadLTM, &wait)
 	}
+	// wait for creating all LTM pools
 	wait.Wait()
-	go func() {
-		baboonGTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityGTMService"],
-			be.config["trafficManager"])
-		u, err := url.Parse(baboonGTMEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-			return
-		}
-		glog.Infof("about to add F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
+	// calls baboon-proxy to create GTM pool and wideip
+	baboonGTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityGTMService"],
+		be.config["trafficManager"])
+	u, err := url.Parse(baboonGTMEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to add F5 GTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
 
-		response, err = be.session.Post(u.String(), payloadGTMPool, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to add GTM pool '%s'", poolName)
-			return
-		}
-		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
-		baboonGTMEndpoint = fmt.Sprintf("%s%s/wideips", be.config["entityGTMService"],
-			be.config["trafficManager"])
-		u, err = url.Parse(baboonGTMEndpoint)
-		if err != nil {
-			glog.Errorf("unable to parse rawurl, reason %s", err)
-			return
-		}
-		glog.Infof("about to add F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
+	response, err = be.session.Post(u.String(), payloadGTMPool, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to add GTM pool '%s'", poolName)
+		return
+	}
+	glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+	baboonGTMEndpoint = fmt.Sprintf("%s%s/wideips", be.config["entityGTMService"],
+		be.config["trafficManager"])
+	u, err = url.Parse(baboonGTMEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to add F5 GTM wideip entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonGTMEndpoint)
 
-		response, err = be.session.Post(u.String(), payloadGTMWideip, nil, nil)
-		if err != nil {
-			glog.Errorf("unable to create GTM wideip '%s'")
-			return
-		}
-		glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
-	}()
+	response, err = be.session.Post(u.String(), payloadGTMWideip, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to create GTM wideip '%s'")
+		return
+	}
+	glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
 }
 
-// modifyPoolMember calls baboon
-func (be Baboon) modifyPoolMember(e StatusUpdateEvent) {
+// createLTMPool calls baboon-proxy creating all pools in all DCs concurrently
+func (be Baboon) createLTMPool(loadbalancer string, e ApiRequestEvent, poolName string, payloadLTM addLTMPool, wait *sync.WaitGroup) {
+	defer wait.Done()
+	baboonLTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityLTMService"], loadbalancer)
+	u, err := url.Parse(baboonLTMEndpoint)
+	if err != nil {
+		glog.Errorf("unable to parse rawurl, reason %s", err)
+		return
+	}
+	glog.Infof("about to add F5 LTM pool entity with AppID '%s' via calling '%s'", e.Appdefinition.ID, baboonLTMEndpoint)
+
+	response, err := be.session.Post(u.String(), payloadLTM, nil, nil)
+	if err != nil {
+		glog.Errorf("unable to add LTM pool '%s'", poolName)
+		return
+	}
+	glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
+	return
+}
+
+// modify calls baboon-proxy to add or delete members in LTM pools
+func (be Baboon) modify(e StatusUpdateEvent) {
 	var (
 		response *napping.Response
 		entity   LTMPoolService
