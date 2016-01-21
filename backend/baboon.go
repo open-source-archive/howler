@@ -147,6 +147,8 @@ func (be Baboon) destroy(e AppTerminatedEvent) {
 	be.session.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	wait.Add(len(loadbalancerSlice))
 	for i := range loadbalancerSlice {
+		// running multiple go routines to delete LTM pools concurrently
+		// otherwise it's to slow waiting for each LTM
 		go be.destroyLTMPool(loadbalancerSlice[i], e, poolName, &wait)
 	}
 	// wait for destroying all LTM pools
@@ -235,6 +237,9 @@ func (be Baboon) create(e ApiRequestEvent) {
 
 	wait.Add(len(loadbalancerSlice))
 	for i := range loadbalancerSlice {
+		// running multiple go routines to create LTM pools concurrently
+		// otherwise it's to slow for incoming status_update_events
+		// LTM pool members can only be modified if the LTM pool already exists
 		go be.createLTMPool(loadbalancerSlice[i], e, poolName, payloadLTM, &wait)
 	}
 	// wait for creating all LTM pools
