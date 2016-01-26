@@ -13,12 +13,11 @@ go get github.com/tools/godep
 godep restore
 #install to $GOBIN
 godep go install -tags zalando github.com/zalando-techmonkeys/howler/...
-#for tagging the build, both server and cli:
-godep go install  -tags zalando -ldflags "-X main.Buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.Githash=`git rev-parse HEAD`"   github.com/zalando-techmonkeys/howler/...
+#for tagging the build (where the `-tags` parameter is used to enable certain backend sets from [backendconfig](./backendconfig/) ):
+godep go install -tags zalando -ldflags "-X main.Buildstamp=`date -u '+%Y-%m-%d_%I:%M:%S%p'` -X main.Githash=`git rev-parse HEAD`" github.com/zalando-techmonkeys/howler/...
 ```
 
 This should compile the server binary `howler`, which you can put in `/usr/bin/` and start with this [init-script](howler.init.d).
-
 
 ## Config
 
@@ -55,8 +54,6 @@ To be actually useful, there have to be [backends](./backend) which process the 
 - [app_terminated_event](https://github.com/mesosphere/marathon/issues/1530), handled by `HandleDestroy()`
 
 Have a look on the [dummy backend](backend/dummy.go) for an example.
-
-## Development
 
 * Issues: Just create issues on github
 * Enhancements/Bugfixes: Pull requests are welcome
