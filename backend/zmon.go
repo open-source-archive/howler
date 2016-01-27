@@ -13,9 +13,8 @@ import (
 )
 
 type Zmon struct {
-	name              string
-	session           napping.Session
-	zmonEntityService string
+	name   string
+	config map[string]string
 }
 
 // ZmonEntity represents an entity in ZMON
@@ -35,15 +34,9 @@ func (be Zmon) Name() string {
 
 func (be Zmon) Register() (error, Backend) {
 
-	backendConfig := conf.New().Backends["zmon"]
+	config := conf.New().Backends["zmon"]
 
-	s := napping.Session{}
-	s.Userinfo = url.UserPassword(backendConfig["user"], backendConfig["password"])
-	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
-
-	zmonEntityService := backendConfig["entityService"]
-
-	return nil, Zmon{name: "Zmon", session: s, zmonEntityService: zmonEntityService}
+	return nil, Zmon{name: "Zmon", config: config}
 }
 
 func (be Zmon) HandleCreate(e ApiRequestEvent) {
@@ -67,13 +60,14 @@ func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
-	deleteURL := fmt.Sprintf("%s/?id=%s", be.zmonEntityService, e.Taskid)
+	deleteURL := fmt.Sprintf("%s/?id=%s", be.config["entityService"], e.Taskid)
 	glog.Infof("about to delete zmonEntity entity with ID '%s' via calling '%s'", e.Taskid, deleteURL)
 
 	p := napping.Params{"id": e.Taskid}.AsUrlValues()
-	response, err = be.session.Delete(deleteURL, &p, nil, nil)
+	session := be.getSession()
+	response, err = session.Delete(deleteURL, &p, nil, nil)
 	if err != nil {
-		glog.Errorf(fmt.Sprintf("unable to delete zmonEntity with ID '%s'", e.Taskid))
+		glog.Errorf(fmt.Sprintf("unable to delete zmonEntity with ID '%s': %s", e.Taskid, err))
 		return err
 	}
 	glog.Infof("DELETE response (%d): %s", response.Status(), response.RawText())
@@ -95,13 +89,24 @@ func (be Zmon) insertEntity(e StatusUpdateEvent) error {
 		entity.Ports[strconv.Itoa(port)] = port
 	}
 
-	glog.Infof("about to insert zmonEntity entity with ID '%s' via calling '%s'", e.Taskid, be.zmonEntityService)
+	glog.Infof("about to insert zmonEntity entity with ID '%s' via calling '%s'", e.Taskid, be.config["entityService"])
 
-	response, err = be.session.Put(be.zmonEntityService, entity, nil, nil)
+	session := be.getSession()
+	response, err = session.Put(be.config["entityService"], entity, nil, nil)
 	if err != nil {
-		glog.Errorf("unable to insert zmonEntity with ID '%s'", entity.ID)
+		glog.Errorf("unable to insert zmonEntity with ID '%s': %s", entity.ID, err)
 		return err
 	}
 	glog.Infof("PUT response (%d): %s", response.Status(), response.RawText())
 	return nil
+}
+
+func (be Zmon) getSession() napping.Session {
+
+	s := napping.Session{}
+	s.Userinfo = url.UserPassword(be.config["user"], be.config["password"])
+	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
+
+	return s
+
 }
