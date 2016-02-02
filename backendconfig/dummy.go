@@ -1,4 +1,4 @@
-//+build dummy !zalando
+//+build dummy
 
 package backendconfig
 
