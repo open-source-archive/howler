@@ -149,12 +149,10 @@ func (v Vault) createSecrets(e StatusUpdateEvent) {
 	//TODO discard previous authentication
 }
 
-// HandleCreate creates new loadbalancer pools
 func (v Vault) HandleCreate(e ApiRequestEvent) {
 	return //No need of actions in case of create requests
 }
 
-// HandleDestroy deletes loadbalancer pools
 func (v Vault) HandleDestroy(e AppTerminatedEvent) {
 	return //No need of actions in case of create requests
 }
