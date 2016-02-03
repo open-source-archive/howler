@@ -1,3 +1,3 @@
-path "cubbyhole/{{.AppID}}" {
+path "cubbyhole/temp-token" {
   policy = "write"
 }

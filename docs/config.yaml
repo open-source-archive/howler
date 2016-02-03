@@ -1,0 +1,19 @@
+---
+fluentdEnabled: true
+debugEnabled: true
+oauth2Enabled: false
+authURL:  https://token.auth.zalando.com/access_token
+tokenURL: https://auth.zalando.com/z/oauth2/tokeninfo
+tlsCertfilePath: /path/to/your/certfile
+tlsKeyfilePath: /path/to/your/keyfile
+logFlushInterval: 5 #in seconds
+port: 12345
+backends:
+    vault:
+        serverPort: 7777
+        vaultURI: http://localhost:8200
+        vaultToken: MY_TOKEN
+        policyFile: /my/path/vault_template.tpl
+        tokenTTL: 30m #in minutes
+        tlsCertfilePath: /path/to/your/certfile
+        tlsKeyfilePath: /path/to/your/keyfile
