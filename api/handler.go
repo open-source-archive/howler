@@ -78,7 +78,6 @@ func determineEventType(r *http.Request) string {
 
 	// TeeReader returns a Reader that writes to b what it reads from r.Body.
 	reader := io.TeeReader(r.Body, b)
-
 	var event backend.Event
 	if err := json.NewDecoder(reader).Decode(&event); err != nil {
 		glog.Fatal(err)
@@ -89,6 +88,5 @@ func determineEventType(r *http.Request) string {
 
 	// NopCloser returns a ReadCloser with a no-op Close method wrapping the provided Reader r.
 	r.Body = ioutil.NopCloser(b)
-
 	return event.Eventtype
 }
