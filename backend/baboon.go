@@ -365,7 +365,9 @@ func (be Baboon) modify(e StatusUpdateEvent) {
 		req.Header.Set("Content-Type", "application/json")
 		c := &http.Client{}
 		rsp, err := c.Do(req)
-		defer rsp.Body.Close()
+		if rsp != nil {
+			defer rsp.Body.Close()
+		}
 		if err != nil {
 			glog.Errorf("unable to remove pool member '%s'", entity.PoolMember)
 			return
