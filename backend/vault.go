@@ -95,6 +95,7 @@ func (v *Vault) startServer() error {
 
 //Register is used to register the vault plugin in howler
 func (v *Vault) Register() error { //FIXME: error should always be the last error type
+	v.name = "Vault"
 	config := conf.New().Backends["vault"]
 	mandatoryConfigCheck(config)
 	v.config = config
@@ -183,7 +184,7 @@ func (v *Vault) HandleDestroy(e AppTerminatedEvent) {
 
 //Name returns the backend service name
 func (v *Vault) Name() string {
-	return "Vault"
+	return v.name
 }
 
 type vaultBackend struct {

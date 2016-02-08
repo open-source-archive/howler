@@ -9,10 +9,11 @@ type DummyBackend struct {
 }
 
 func (be *DummyBackend) Name() string {
-	return "DummyBackend"
+	return be.name
 }
 
 func (be *DummyBackend) Register() error {
+	be.name = "DummyBackend"
 	return nil
 }
 

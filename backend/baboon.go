@@ -92,11 +92,12 @@ type addGTMPoolMember struct {
 
 //Name returns the backend service name
 func (be *Baboon) Name() string {
-	return be.config["name"]
+	return be.name
 }
 
 // Register reads backend config for baboon
 func (be *Baboon) Register() error {
+	be.name = "Baboon"
 	config := conf.New().Backends["baboon"]
 	glog.Infof("%+v", config)
 	glog.Infof("%s", config["tokenFile"])

@@ -29,11 +29,12 @@ type ZmonEntity struct {
 }
 
 func (be *Zmon) Name() string {
-	return "Zmon"
+	return be.name
 }
 
 func (be *Zmon) Register() error {
 
+	be.name = "Zmon"
 	be.config = conf.New().Backends["zmon"]
 
 	return nil
