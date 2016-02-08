@@ -8,17 +8,17 @@ type DummyBackend struct {
 	name string
 }
 
-func (be DummyBackend) Name() string {
-	return be.name
+func (be *DummyBackend) Name() string {
+	return "DummyBackend"
 }
 
-func (be DummyBackend) Register() (error, Backend) {
-	return nil, DummyBackend{name: "DummyBackend"}
+func (be *DummyBackend) Register() error {
+	return nil
 }
 
-func (be DummyBackend) HandleUpdate(e StatusUpdateEvent) {
+func (be *DummyBackend) HandleUpdate(e StatusUpdateEvent) {
 	glog.Infof("%+v\n", e)
 }
 
-func (be DummyBackend) HandleCreate(e ApiRequestEvent)     {}
-func (be DummyBackend) HandleDestroy(e AppTerminatedEvent) {}
+func (be *DummyBackend) HandleCreate(e ApiRequestEvent)     {}
+func (be *DummyBackend) HandleDestroy(e AppTerminatedEvent) {}

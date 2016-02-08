@@ -91,23 +91,24 @@ type addGTMPoolMember struct {
 }
 
 //Name returns the backend service name
-func (be Baboon) Name() string {
+func (be *Baboon) Name() string {
 	return be.config["name"]
 }
 
 // Register reads backend config for baboon
-func (be Baboon) Register() (error, Backend) {
+func (be *Baboon) Register() error {
 	config := conf.New().Backends["baboon"]
 	glog.Infof("%+v", config)
 	glog.Infof("%s", config["tokenFile"])
 	s := napping.Session{}
 	s.Header = &http.Header{"Content-Type": []string{"application/json"}}
-	backendConfig := &Baboon{config: config, session: &s}
-	return nil, backendConfig
+	be.config = config
+	be.session = &s
+	return nil
 }
 
 // getToken reads from tokenFile
-func (be Baboon) getToken() string {
+func (be *Baboon) getToken() string {
 	var bt BaboonToken
 	r, err := ioutil.ReadFile(be.config["tokenFile"])
 	if err != nil {
@@ -120,22 +121,22 @@ func (be Baboon) getToken() string {
 }
 
 // HandleUpdate adds or removes container to loadbalancer pool
-func (be Baboon) HandleUpdate(e StatusUpdateEvent) {
+func (be *Baboon) HandleUpdate(e StatusUpdateEvent) {
 	be.modify(e)
 }
 
 // HandleCreate creates new LTM pools, GTM pools and GTM wideip
-func (be Baboon) HandleCreate(e ApiRequestEvent) {
+func (be *Baboon) HandleCreate(e ApiRequestEvent) {
 	be.create(e)
 }
 
 // HandleDestroy deletes LTM pools, GTM pools and GTM wideip
-func (be Baboon) HandleDestroy(e AppTerminatedEvent) {
+func (be *Baboon) HandleDestroy(e AppTerminatedEvent) {
 	be.destroy(e)
 }
 
 // destroy calls baboon-proxy to destroy LTM pools, GTM pool and GTM wideip
-func (be Baboon) destroy(e AppTerminatedEvent) {
+func (be *Baboon) destroy(e AppTerminatedEvent) {
 	var (
 		response *napping.Response
 		wait     sync.WaitGroup
@@ -187,7 +188,7 @@ func (be Baboon) destroy(e AppTerminatedEvent) {
 }
 
 // destroyLTMPool calls baboon-proxy destroying all pools in all DCs concurrently
-func (be Baboon) destroyLTMPool(loadbalancer string, e AppTerminatedEvent, poolName string, wait *sync.WaitGroup) {
+func (be *Baboon) destroyLTMPool(loadbalancer string, e AppTerminatedEvent, poolName string, wait *sync.WaitGroup) {
 	defer wait.Done()
 	baboonEndpoint := fmt.Sprintf("%s%s/pools/%s",
 		be.config["entityLTMService"], loadbalancer, poolName)
@@ -208,7 +209,7 @@ func (be Baboon) destroyLTMPool(loadbalancer string, e AppTerminatedEvent, poolN
 }
 
 // create calls baboon-proxy to create LTM pools, GTM pool and GTM wideip
-func (be Baboon) create(e ApiRequestEvent) {
+func (be *Baboon) create(e ApiRequestEvent) {
 	var (
 		response *napping.Response
 		wait     sync.WaitGroup
@@ -278,7 +279,7 @@ func (be Baboon) create(e ApiRequestEvent) {
 }
 
 // createLTMPool calls baboon-proxy creating all pools in all DCs concurrently
-func (be Baboon) createLTMPool(loadbalancer string, e ApiRequestEvent, poolName string, payloadLTM addLTMPool, wait *sync.WaitGroup) {
+func (be *Baboon) createLTMPool(loadbalancer string, e ApiRequestEvent, poolName string, payloadLTM addLTMPool, wait *sync.WaitGroup) {
 	defer wait.Done()
 	baboonLTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityLTMService"], loadbalancer)
 	u, err := url.Parse(baboonLTMEndpoint)
@@ -298,7 +299,7 @@ func (be Baboon) createLTMPool(loadbalancer string, e ApiRequestEvent, poolName 
 }
 
 // modify calls baboon-proxy to add or delete members in LTM pools
-func (be Baboon) modify(e StatusUpdateEvent) {
+func (be *Baboon) modify(e StatusUpdateEvent) {
 	var (
 		response *napping.Response
 		entity   LTMPoolService

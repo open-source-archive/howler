@@ -52,7 +52,7 @@ type Vault struct {
 }
 
 //getSecret is the handler to read the secret from a channel based on the app id
-func (v Vault) getSecret(ginCtx *gin.Context) {
+func (v *Vault) getSecret(ginCtx *gin.Context) {
 	appID := ginCtx.Params.ByName("appID")
 	glog.Infof("App %s waiting to read cubbyhole token.\n", appID)
 	createChannelIfNotExistent(appID)
@@ -62,7 +62,7 @@ func (v Vault) getSecret(ginCtx *gin.Context) {
 }
 
 //run starts the webserver
-func (v Vault) startServer() error {
+func (v *Vault) startServer() error {
 	glog.Infof("Starting local server\n")
 	router := gin.New()
 	//TODO initialize configurations, correct middlewares, https/http
@@ -94,13 +94,13 @@ func (v Vault) startServer() error {
 }
 
 //Register is used to register the vault plugin in howler
-func (v Vault) Register() (error, Backend) { //FIXME: error should always be the last error type
+func (v *Vault) Register() error { //FIXME: error should always be the last error type
 	config := conf.New().Backends["vault"]
 	mandatoryConfigCheck(config)
 	v.config = config
 	sharedSecret = make(map[string]chan string)
 	go v.startServer()
-	return nil, v
+	return nil
 }
 
 //pushValueToChannel pushes a value to a channel. It invokes "make" if this was not done before
@@ -111,7 +111,7 @@ func createChannelIfNotExistent(appID string) {
 }
 
 // HandleUpdate adds or removes container to loadbalancer pool
-func (v Vault) HandleUpdate(e StatusUpdateEvent) {
+func (v *Vault) HandleUpdate(e StatusUpdateEvent) {
 	switch e.Taskstatus {
 	case "TASK_RUNNING":
 		glog.Infof("Task is running, creating secrets\n")
@@ -120,7 +120,7 @@ func (v Vault) HandleUpdate(e StatusUpdateEvent) {
 	//TODO: do we have to handle other status?
 }
 
-func (v Vault) createSecrets(e StatusUpdateEvent) {
+func (v *Vault) createSecrets(e StatusUpdateEvent) {
 	vb := vaultBackend{}
 	vb.appID = strings.TrimPrefix(e.Appid, "/") //Marathon specific, needed to remove initial "/" char
 
@@ -172,17 +172,17 @@ func (v Vault) createSecrets(e StatusUpdateEvent) {
 }
 
 //HandleCreate does nothing in this case as we're not dealing with Create events
-func (v Vault) HandleCreate(e ApiRequestEvent) {
+func (v *Vault) HandleCreate(e ApiRequestEvent) {
 	return //No need of actions in case of create requests
 }
 
 //HandleDestroy does nothing in this case as we're not dealing with Delete events
-func (v Vault) HandleDestroy(e AppTerminatedEvent) {
+func (v *Vault) HandleDestroy(e AppTerminatedEvent) {
 	return //No need of actions in case of destroy requests
 }
 
 //Name returns the backend service name
-func (v Vault) Name() string {
+func (v *Vault) Name() string {
 	return "Vault"
 }
 
