@@ -1,11 +1,18 @@
 {
 	"ImportPath": "github.com/zalando-techmonkeys/howler",
 	"GoVersion": "go1.5",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/BurntSushi/toml",
 			"Comment": "v0.1.0-9-g3883ac1",
 			"Rev": "3883ac1ce943878302255f538fce319d23226223"
+		},
+		{
+			"ImportPath": "github.com/fatih/structs",
+			"Rev": "dd04ebad3deb3e3833c98ce4a83e2bff65734236"
 		},
 		{
 			"ImportPath": "github.com/gin-gonic/gin",
@@ -15,6 +22,19 @@
 		{
 			"ImportPath": "github.com/golang/glog",
 			"Rev": "fca8c8854093a154ff1eb580aae10276ad6b1b5f"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-cleanhttp",
+			"Rev": "5df5ddc69534f1a4697289f1dca2193fbb40213f"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/hcl",
+			"Rev": "c40ec20b1285f01e9e75ec39f2bf2cff132891d3"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/vault/api",
+			"Comment": "v0.4.1-223-g6030324",
+			"Rev": "60303244bce076bb72ce5516062cacf57fce7be6"
 		},
 		{
 			"ImportPath": "github.com/kr/pretty",
@@ -36,11 +56,7 @@
 		},
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
-			"Rev": "40e4aedc8fabf8c23e040057540867186712faa5"
-		},
-		{
-			"ImportPath": "github.com/mattn/go-isatty",
-			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
+			"Rev": "3dac7b4f76f6e17fb39b768b89e3783d16e237fe"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
@@ -73,20 +89,16 @@
 		},
 		{
 			"ImportPath": "github.com/zalando-techmonkeys/gin-oauth2",
-			"Comment": "1.1.1-1-g1075905",
-			"Rev": "1075905bf2fa9281ac481ff91c0346cfb4b56939"
+			"Comment": "1.1.1-15-g27faf8d",
+			"Rev": "27faf8de49651a9e0722bf4f669a02aeb539dc44"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "042ba42fa6633b34205efc66ba5719cd3afd8d38"
+			"Rev": "04b9de9b512f58addf28c9853d50ebef61c3953e"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
-			"Rev": "d4780cd8b5fffdab1cc8ef7a4f9050dc37755847"
-		},
-		{
-			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
+			"Rev": "8a57ed94ffd43444c0879fe75701732a38afc985"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
