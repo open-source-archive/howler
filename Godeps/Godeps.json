@@ -59,6 +59,10 @@
 			"Rev": "3dac7b4f76f6e17fb39b768b89e3783d16e237fe"
 		},
 		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "281073eb9eb092240d33ef253c404f1cca550309"
 		},
@@ -99,6 +103,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "8a57ed94ffd43444c0879fe75701732a38afc985"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
