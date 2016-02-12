@@ -49,6 +49,7 @@ func mandatoryConfigCheck(config map[string]string) {
 //        tlsKeyfilePath: /path/to/your/keyfile
 type Vault struct {
 	config map[string]string
+	name   string
 }
 
 //getSecret is the handler to read the secret from a channel based on the app id

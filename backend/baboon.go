@@ -20,6 +20,7 @@ import (
 type Baboon struct {
 	config  map[string]string
 	session *napping.Session
+	name    string
 }
 
 // LTMPoolService is the basic pool type
