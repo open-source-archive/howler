@@ -28,26 +28,27 @@ type ZmonEntity struct {
 	DataCenterCode string         `json:"data_center_code"`
 }
 
-func (be Zmon) Name() string {
+func (be *Zmon) Name() string {
 	return be.name
 }
 
-func (be Zmon) Register() (error, Backend) {
+func (be *Zmon) Register() error {
 
-	config := conf.New().Backends["zmon"]
+	be.name = "Zmon"
+	be.config = conf.New().Backends["zmon"]
 
-	return nil, Zmon{name: "Zmon", config: config}
+	return nil
 }
 
-func (be Zmon) HandleCreate(e ApiRequestEvent) {
+func (be *Zmon) HandleCreate(e ApiRequestEvent) {
 	//TODO write implementation
 }
 
-func (be Zmon) HandleDestroy(e AppTerminatedEvent) {
+func (be *Zmon) HandleDestroy(e AppTerminatedEvent) {
 	//TODO write implementation
 }
 
-func (be Zmon) HandleUpdate(e StatusUpdateEvent) {
+func (be *Zmon) HandleUpdate(e StatusUpdateEvent) {
 	if e.Taskstatus == "TASK_RUNNING" {
 		be.insertEntity(e)
 	} else if e.Taskstatus == "TASK_KILLED" || e.Taskstatus == "TASK_LOST" { //TODO should we add more Taskstatus for when a task is killed?
@@ -56,7 +57,7 @@ func (be Zmon) HandleUpdate(e StatusUpdateEvent) {
 	return
 }
 
-func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
+func (be *Zmon) deleteEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
@@ -74,7 +75,7 @@ func (be Zmon) deleteEntity(e StatusUpdateEvent) error {
 	return nil
 }
 
-func (be Zmon) insertEntity(e StatusUpdateEvent) error {
+func (be *Zmon) insertEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
 
@@ -101,7 +102,7 @@ func (be Zmon) insertEntity(e StatusUpdateEvent) error {
 	return nil
 }
 
-func (be Zmon) getSession() napping.Session {
+func (be *Zmon) getSession() napping.Session {
 
 	s := napping.Session{}
 	s.Userinfo = url.UserPassword(be.config["user"], be.config["password"])
