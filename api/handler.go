@@ -19,7 +19,7 @@ import (
 // rootHandler serving "/" which returns build information
 func rootHandler(ginCtx *gin.Context) {
 	config := conf.New()
-	ginCtx.JSON(http.StatusOK, gin.H{"howler": fmt.Sprintf("Build Time: %s - Git Commit Hash: %s", config.VersionBuildStamp, config.VersionGitHash)})
+	ginCtx.JSON(http.StatusOK, gin.H{"howler": fmt.Sprintf("Version: %s - Build Time: %s - Git Commit Hash: %s", config.Version, config.BuildStamp, config.GitHash)})
 }
 
 // basic health check, will always return 'OK' for now

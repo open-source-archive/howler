@@ -14,9 +14,9 @@ import (
 	"github.com/zalando-techmonkeys/gin-gomonitor/aspects"
 	"github.com/zalando-techmonkeys/gin-oauth2"
 	"github.com/zalando-techmonkeys/gin-oauth2/zalando"
+	"github.com/zalando-techmonkeys/howler/conf"
 	"golang.org/x/oauth2"
 	"gopkg.in/mcuadros/go-monitor.v1/aspects"
-	"github.com/zalando-techmonkeys/howler/conf"
 )
 
 type ServerSettings struct {

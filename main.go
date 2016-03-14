@@ -13,12 +13,9 @@ import (
 	"github.com/zalando-techmonkeys/howler/conf"
 )
 
-//Buildstamp and Githash are used to set information at build time regarding
-//the version of the build.
-//Buildstamp is used for storing the timestamp of the build
+//Version, Buildstamp and Githash are used to set version information at build time
+var Version string = "Not set"
 var Buildstamp string = "Not set"
-
-//Githash is used for storing the commit hash of the build
 var Githash string = "Not set"
 
 var serverConfig *conf.Config
@@ -35,10 +32,12 @@ Example:
 		flag.PrintDefaults()
 	}
 	serverConfig = conf.New()
-	serverConfig.VersionBuildStamp = Buildstamp
-	serverConfig.VersionGitHash = Githash
+	serverConfig.Version = Version
+	serverConfig.BuildStamp = Buildstamp
+	serverConfig.GitHash = Githash
 	//config from file is loaded.
 	//the values will be overwritten by command line flags
+	flag.BoolVar(&serverConfig.PrintVersion, "version", false, "Print version and exit")
 	flag.BoolVar(&serverConfig.DebugEnabled, "debug", serverConfig.DebugEnabled, "Enable debug output")
 	flag.BoolVar(&serverConfig.Oauth2Enabled, "oauth", serverConfig.Oauth2Enabled, "Enable OAuth2")
 	flag.StringVar(&serverConfig.AuthURL, "oauth-authurl", serverConfig.AuthURL, "OAuth2 Auth URL")
@@ -54,6 +53,11 @@ Example:
 
 func main() {
 	flag.Parse()
+
+	if serverConfig.PrintVersion {
+		fmt.Printf("Version: %s - Build Time: %s - Git Commit Hash: %s", serverConfig.Version, serverConfig.BuildStamp, serverConfig.GitHash)
+		os.Exit(0)
+	}
 
 	// default https, if cert and key are found
 	var err error
