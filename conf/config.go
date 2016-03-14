@@ -12,18 +12,20 @@ import (
 )
 
 type Config struct {
-	DebugEnabled      bool
-	Oauth2Enabled     bool //true if authentication is enabled
-	AuthURL           string
-	TokenURL          string
-	TlsCertfilePath   string
-	TlsKeyfilePath    string
-	LogFlushInterval  time.Duration
-	Port              int
-	AuthorizedUsers   []AccessTuple
-	Backends          map[string]map[string]string
-	VersionBuildStamp string
-	VersionGitHash    string
+	DebugEnabled     bool
+	Oauth2Enabled    bool //true if authentication is enabled
+	AuthURL          string
+	TokenURL         string
+	TlsCertfilePath  string
+	TlsKeyfilePath   string
+	LogFlushInterval time.Duration
+	Port             int
+	AuthorizedUsers  []AccessTuple
+	Backends         map[string]map[string]string
+	PrintVersion     bool
+	Version          string
+	BuildStamp       string
+	GitHash          string
 }
 
 type AccessTuple struct {
