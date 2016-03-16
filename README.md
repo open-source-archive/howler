@@ -196,6 +196,9 @@ request. To help you get started, here are some items that we'd love
 help with:
 
 - add Kubernetes (another Cluster-Manager) as event source
+- write unit tests: this [talk](https://speakerdeck.com/mitchellh/advanced-testing-with-go) can help to do this.
+- implement example init script to show a working secret distribution
+  with vault backend
 - the code base
 
 Please use github issues as starting point for contributions, new
