@@ -1,6 +1,5 @@
 # Howler
 
-[![Coverage Status](https://coveralls.io/repos/zalando-techmonkeys/howler/badge.svg?branch=master&service=github)](https://coveralls.io/github/zalando-techmonkeys/howler?branch=master)
 [![Go Report Card](http://goreportcard.com/badge/zalando-techmonkeys/howler)](http://goreportcard.com/report/zalando-techmonkeys/howler)
 
 Howler registers to events of cluster-managers
