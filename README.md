@@ -42,8 +42,7 @@ way.
 F5 LTM loadbalancer and F5 GTM DNS server integration, which also
 shows [chimp](https://github.com/zalando-techmonkeys/chimp) a PAAS
 style deployment tool:
-![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.svg
-)
+![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.svg)
 
 ### Kubernetes
 
