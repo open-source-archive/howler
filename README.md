@@ -38,10 +38,6 @@ way.
 
 #### Deployment concept
 
-F5 LTM loadbalancer and F5 GTM DNS server integration, which also
-shows [chimp](https://github.com/zalando-techmonkeys/chimp) a PAAS
-style deployment tool:
-![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.png)
 
 ### Kubernetes
 
@@ -83,6 +79,79 @@ The URL of the endpoint should target to howler, which you have to configure how
     http_callback
     [marathon-host]% cat /etc/marathon/conf/http_endpoints
     http://my-howler-host:12345/events
+
+### Backends
+Backends are the most valuable part, because you can
+
+#### Loadbalancer - F5 LTM and GTM
+F5 is a manufacturer that produces hardware loadbalancers like LTM Big
+IP and GTM a smart DNS server.
+
+LTM loadbalancer and GTM DNS server integration, also
+shows
+[baboon-proxy](https://github.com/zalando-techmonkeys/baboon-proxy),
+the most feature complete F5 RESTful API, and
+[chimp](https://github.com/zalando-techmonkeys/chimp), a PAAS
+style deployment tool:
+
+![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.png)
+
+#### Monitoring - Zmon
+[Zmon](https://github.com/zalando/zmon) is an Open Source monitoring
+tool.  Howler can manage Zmon entities that need to be updated if an
+instance is destroyed, scheduled somewhere else or newly created.
+
+![Zmon integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/monitoring.png)
+
+#### Secret Distribution - vault
+[vault](https://github.com/hashicorp/vault) is a tool for managing
+secrets.
+
+Howler can help you to provide a new deployed instance with it's
+secrets maintained by [vault](https://github.com/hashicorp/vault).
+
+This backend is currently under development.
+
+The idea is a bit more completed than the other backends. It uses
+vault's cubbyhole approach called
+[coprocess](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html).
+This means howler will provide you with secrets, only if the requester
+(in most cases your init script) can provide the shared cubbyhole token.
+
+The picture shows the steps of secret distribution and the
+responsibilities of howler and other components.
+![Secret distribution integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/secrets-distribution-vault.png)
+
+##### Requirements Vault
+- You need to have a running and unsealed vault
+- You need to have "secret" and "cubbyhole" vault backends.
+
+##### Howler-vault backend
+Howler-vault has a rootToken to create policies for applications,
+create cubbyhole-tokens, secret-tokens, read/write into cubbyhole.
+
+A goroutine per deployment-instance will:
+
+1. Create policies for new applications and write them to vault
+1. Create cubbyhole-token
+1. Create secret-token with policy
+1. Authenticate with cubbyhole token (shared) to vault
+1. Write secret-token into cubbyhole/sharedsecret. Cubbyhole stores
+   secrets per token, that means same path for everyone is ok.
+1. Create an https endpoint for the upcoming docker-host.
+1. Wait for the newly deployed docker-host and respond with it's
+   cubbyhole token (Requester may be an init script within docker)
+1. terminate goroutine
+
+##### Init Script
+The init script got now a cubbyhole token which it will use to
+authenticate to vault. These are the steps that you have to do within
+the init script:
+
+1. Authenticate with cubbyhole-token to vault
+1. Read the secret token from cubbyhole/sharedsecret
+1. Authenticate with secret-token to vault
+1. Read application secrets from secret/&lt;marathon-appID&gt;
 
 ### Sample Config
 
