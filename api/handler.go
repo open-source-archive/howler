@@ -37,7 +37,7 @@ func createEvent(ginCtx *gin.Context) {
 
 	switch eventType {
 	case "api_post_event":
-		var marathonEvent backend.ApiRequestEvent
+		var marathonEvent backend.APIRequestEvent
 		ginCtx.Bind(&marathonEvent)
 
 		glog.Infof("dispatching to backends: %# v", pretty.Formatter(marathonEvent))

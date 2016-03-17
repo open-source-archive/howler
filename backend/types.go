@@ -1,6 +1,6 @@
 package backend
 
-// Basic type containing only the fields all Marathon events have in common.
+//Event provides abbasic type containing only the fields all Marathon events have in common.
 type Event struct {
 	Eventtype string `json:"eventType"`
 	Timestamp string `json:"timestamp"`
@@ -10,7 +10,8 @@ type Event struct {
 // from Marathon Event Bus docu examples
 // (https://raw.githubusercontent.com/mesosphere/marathon/master/docs/docs/event-bus.md).
 
-type ApiRequestEvent struct {
+//APIRequestEvent for requests that modifies an app (create, update, delete)
+type APIRequestEvent struct {
 	Event
 	Clientip      string `json:"clientIp"`
 	URI           string `json:"uri"`
@@ -41,6 +42,7 @@ type ApiRequestEvent struct {
 	} `json:"appDefinition"`
 }
 
+//StatusUpdateEvent for status of a task changes
 type StatusUpdateEvent struct {
 	Event
 	Slaveid    string `json:"slaveId"`
@@ -52,6 +54,7 @@ type StatusUpdateEvent struct {
 	Version    string `json:"version"`
 }
 
+//AppTerminatedEvent for requests that deletes an app
 type AppTerminatedEvent struct {
 	Event
 	Appid string `json:"appId"`

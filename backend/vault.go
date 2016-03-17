@@ -174,7 +174,7 @@ func (v *Vault) createSecrets(e StatusUpdateEvent) {
 }
 
 //HandleCreate does nothing in this case as we're not dealing with Create events
-func (v *Vault) HandleCreate(e ApiRequestEvent) {
+func (v *Vault) HandleCreate(e APIRequestEvent) {
 	return //No need of actions in case of create requests
 }
 

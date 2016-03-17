@@ -12,6 +12,7 @@ import (
 	"gopkg.in/jmcvetta/napping.v3"
 )
 
+// Zmon backend general fields
 type Zmon struct {
 	name   string
 	config map[string]string
@@ -28,10 +29,12 @@ type ZmonEntity struct {
 	DataCenterCode string         `json:"data_center_code"`
 }
 
+//Name returns Zmon backend name
 func (be *Zmon) Name() string {
 	return be.name
 }
 
+//Register initializes Zmon backend
 func (be *Zmon) Register() error {
 
 	be.name = "Zmon"
@@ -40,14 +43,17 @@ func (be *Zmon) Register() error {
 	return nil
 }
 
-func (be *Zmon) HandleCreate(e ApiRequestEvent) {
+//HandleCreate reaps API request events from Marathon
+func (be *Zmon) HandleCreate(e APIRequestEvent) {
 	//TODO write implementation
 }
 
+//HandleDestroy reaps API terminated events from Marathon
 func (be *Zmon) HandleDestroy(e AppTerminatedEvent) {
 	//TODO write implementation
 }
 
+//HandleUpdate reaps update events from Marathon
 func (be *Zmon) HandleUpdate(e StatusUpdateEvent) {
 	if e.Taskstatus == "TASK_RUNNING" {
 		be.insertEntity(e)
@@ -57,6 +63,7 @@ func (be *Zmon) HandleUpdate(e StatusUpdateEvent) {
 	return
 }
 
+//deleteEntity deletes Zmon entities
 func (be *Zmon) deleteEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
@@ -75,6 +82,7 @@ func (be *Zmon) deleteEntity(e StatusUpdateEvent) error {
 	return nil
 }
 
+//insertEntity creates/updates Zmon entities
 func (be *Zmon) insertEntity(e StatusUpdateEvent) error {
 	var err error
 	var response *napping.Response
@@ -102,6 +110,7 @@ func (be *Zmon) insertEntity(e StatusUpdateEvent) error {
 	return nil
 }
 
+//getSession initiates a Zmon session
 func (be *Zmon) getSession() napping.Session {
 
 	s := napping.Session{}
