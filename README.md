@@ -1,6 +1,6 @@
 # Howler
 
-[![Go Report Card](http://goreportcard.com/badge/zalando-techmonkeys/howler)](http://goreportcard.com/report/zalando-techmonkeys/howler)
+[![Go Report Card](https://goreportcard.com/badge/zalando-techmonkeys/howler)](https://goreportcard.com/report/zalando-techmonkeys/howler)
 [![Build Status](https://travis-ci.org/zalando-techmonkeys/howler.svg?branch=master)](https://travis-ci.org/zalando-techmonkeys/howler)
 [![License](http://img.shields.io/badge/license-MIT-yellow.svg?style=flat)](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/LICENSE)
 
