@@ -128,7 +128,7 @@ func (be *Baboon) HandleUpdate(e StatusUpdateEvent) {
 }
 
 // HandleCreate creates new LTM pools, GTM pools and GTM wideip
-func (be *Baboon) HandleCreate(e ApiRequestEvent) {
+func (be *Baboon) HandleCreate(e APIRequestEvent) {
 	be.create(e)
 }
 
@@ -211,7 +211,7 @@ func (be *Baboon) destroyLTMPool(loadbalancer string, e AppTerminatedEvent, pool
 }
 
 // create calls baboon-proxy to create LTM pools, GTM pool and GTM wideip
-func (be *Baboon) create(e ApiRequestEvent) {
+func (be *Baboon) create(e APIRequestEvent) {
 	var (
 		response *napping.Response
 		wait     sync.WaitGroup
@@ -274,14 +274,14 @@ func (be *Baboon) create(e ApiRequestEvent) {
 
 	response, err = be.session.Post(u.String(), payloadGTMWideip, nil, nil)
 	if err != nil {
-		glog.Errorf("unable to create GTM wideip '%s'")
+		glog.Errorf("unable to create GTM wideip '%s'", payloadGTMWideip.Name)
 		return
 	}
 	glog.Infof("POST response (%d): %s", response.Status(), response.RawText())
 }
 
 // createLTMPool calls baboon-proxy creating all pools in all DCs concurrently
-func (be *Baboon) createLTMPool(loadbalancer string, e ApiRequestEvent, poolName string, payloadLTM addLTMPool, wait *sync.WaitGroup) {
+func (be *Baboon) createLTMPool(loadbalancer string, e APIRequestEvent, poolName string, payloadLTM addLTMPool, wait *sync.WaitGroup) {
 	defer wait.Done()
 	baboonLTMEndpoint := fmt.Sprintf("%s%s/pools", be.config["entityLTMService"], loadbalancer)
 	u, err := url.Parse(baboonLTMEndpoint)

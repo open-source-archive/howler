@@ -13,11 +13,16 @@ import (
 	"github.com/zalando-techmonkeys/howler/conf"
 )
 
-//Version, Buildstamp and Githash are used to set version information at build time
-var Version string = "Not set"
-var Buildstamp string = "Not set"
-var Githash string = "Not set"
+//Version set version information at build time
+var Version = "Not set"
 
+//Buildstamp provides a build timestamp
+var Buildstamp = "Not set"
+
+//Githash provides the current hash
+var Githash = "Not set"
+
+//serverConfig inherits Howler config
 var serverConfig *conf.Config
 
 func init() {
@@ -42,8 +47,8 @@ Example:
 	flag.BoolVar(&serverConfig.Oauth2Enabled, "oauth", serverConfig.Oauth2Enabled, "Enable OAuth2")
 	flag.StringVar(&serverConfig.AuthURL, "oauth-authurl", serverConfig.AuthURL, "OAuth2 Auth URL")
 	flag.StringVar(&serverConfig.TokenURL, "oauth-tokeninfourl", serverConfig.TokenURL, "OAuth2 Auth URL")
-	flag.StringVar(&serverConfig.TlsCertfilePath, "tls-cert", serverConfig.TlsCertfilePath, "TLS Certfile")
-	flag.StringVar(&serverConfig.TlsKeyfilePath, "tls-key", serverConfig.TlsKeyfilePath, "TLS Keyfile")
+	flag.StringVar(&serverConfig.TLSCertfilePath, "tls-cert", serverConfig.TLSCertfilePath, "TLS Certfile")
+	flag.StringVar(&serverConfig.TLSKeyfilePath, "tls-key", serverConfig.TLSKeyfilePath, "TLS Keyfile")
 	flag.IntVar(&serverConfig.Port, "port", serverConfig.Port, "Listening TCP Port of the service.")
 	if serverConfig.Port == 0 {
 		serverConfig.Port = 1234 //default port when no option is provided
@@ -62,18 +67,18 @@ func main() {
 	// default https, if cert and key are found
 	var err error
 	httpOnly := false
-	if _, err = os.Stat(serverConfig.TlsCertfilePath); os.IsNotExist(err) {
-		glog.Warningf("WARN: No Certfile found %s\n", serverConfig.TlsCertfilePath)
+	if _, err = os.Stat(serverConfig.TLSCertfilePath); os.IsNotExist(err) {
+		glog.Warningf("WARN: No Certfile found %s\n", serverConfig.TLSCertfilePath)
 		httpOnly = true
-	} else if _, err = os.Stat(serverConfig.TlsKeyfilePath); os.IsNotExist(err) {
-		glog.Warningf("WARN: No Keyfile found %s\n", serverConfig.TlsKeyfilePath)
+	} else if _, err = os.Stat(serverConfig.TLSKeyfilePath); os.IsNotExist(err) {
+		glog.Warningf("WARN: No Keyfile found %s\n", serverConfig.TLSKeyfilePath)
 		httpOnly = true
 	}
 	var keypair tls.Certificate
 	if httpOnly {
 		keypair = tls.Certificate{}
 	} else {
-		keypair, err = tls.LoadX509KeyPair(serverConfig.TlsCertfilePath, serverConfig.TlsKeyfilePath)
+		keypair, err = tls.LoadX509KeyPair(serverConfig.TLSCertfilePath, serverConfig.TLSKeyfilePath)
 		if err != nil {
 			fmt.Printf("ERR: Could not load X509 KeyPair, caused by: %s\n", err)
 			os.Exit(1)

@@ -5,8 +5,10 @@ import (
 	"github.com/zalando-techmonkeys/howler/backend"
 )
 
+// RegisteredBackends inherits backend interface
 var RegisteredBackends []backend.Backend
 
+// RegisterBackends register every backend
 func RegisterBackends(enabledBackends []backend.Backend) []backend.Backend {
 	var backends []backend.Backend
 	for _, backendInstance := range enabledBackends {

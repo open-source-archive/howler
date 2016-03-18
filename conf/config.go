@@ -11,13 +11,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config provides the base fields to start Howler
 type Config struct {
 	DebugEnabled     bool
 	Oauth2Enabled    bool //true if authentication is enabled
 	AuthURL          string
 	TokenURL         string
-	TlsCertfilePath  string
-	TlsKeyfilePath   string
+	TLSCertfilePath  string
+	TLSKeyfilePath   string
 	LogFlushInterval time.Duration
 	Port             int
 	AuthorizedUsers  []AccessTuple
@@ -28,21 +29,22 @@ type Config struct {
 	GitHash          string
 }
 
+// AccessTuple provides fields verifying users
 type AccessTuple struct {
 	Realm string
-	Uid   string
+	UID   string
 	Cn    string
 }
 
-//created a struct just for future usage
+//ConfigError creates a struct just for future usage
 type ConfigError struct {
 	Message string
 }
 
-//shared state for configuration
+//conf shares state for configuration
 var conf *Config
 
-//GetConfig gets the loaded configuration
+//New gets the loaded configuration
 func New() *Config {
 	var err *ConfigError
 	if conf == nil {
@@ -55,6 +57,7 @@ func New() *Config {
 	return conf
 }
 
+//configInit initializes Howler configuration
 func configInit(filename string) (*Config, *ConfigError) {
 	viper := viper.New()
 	viper.SetConfigType("yaml")

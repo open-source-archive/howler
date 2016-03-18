@@ -19,18 +19,20 @@ import (
 	"gopkg.in/mcuadros/go-monitor.v1/aspects"
 )
 
+//ServerSettings inherits basic server settings
 type ServerSettings struct {
 	Configuration *conf.Config
 	CertKeyPair   tls.Certificate
 	Httponly      bool
 }
 
-// global data, p.e. Debug
+// config inherits ServerSettings global data, p.e. Debug
 var config ServerSettings
 
-// Main Service Struct
+//Service Struct
 type Service struct{}
 
+//Run starts Howler
 func (svc *Service) Run(cfg ServerSettings) error {
 	config = cfg // save config in global
 
@@ -61,9 +63,9 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	var private *gin.RouterGroup
 	if config.Configuration.Oauth2Enabled {
 		private = router.Group("")
-		var accessTuple []zalando.AccessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
+		var accessTuple = make([]zalando.AccessTuple, len(config.Configuration.AuthorizedUsers))
 		for i, v := range config.Configuration.AuthorizedUsers {
-			accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.Uid, Cn: v.Cn}
+			accessTuple[i] = zalando.AccessTuple{Realm: v.Realm, Uid: v.UID, Cn: v.Cn}
 		}
 		zalando.AccessTuples = accessTuple
 		private.Use(ginoauth2.Auth(zalando.UidCheck, oauth2Endpoint))
@@ -81,18 +83,18 @@ func (svc *Service) Run(cfg ServerSettings) error {
 	}
 
 	// TLS config
-	var tls_config tls.Config = tls.Config{}
+	var tlsConfig = tls.Config{}
 	if !config.Httponly {
-		tls_config.Certificates = []tls.Certificate{config.CertKeyPair}
-		tls_config.NextProtos = []string{"http/1.1"}
-		tls_config.Rand = rand.Reader // Strictly not necessary, should be default
+		tlsConfig.Certificates = []tls.Certificate{config.CertKeyPair}
+		tlsConfig.NextProtos = []string{"http/1.1"}
+		tlsConfig.Rand = rand.Reader // Strictly not necessary, should be default
 	}
 
 	// run frontend server
 	serve := &http.Server{
 		Addr:      fmt.Sprintf(":%d", config.Configuration.Port),
 		Handler:   router,
-		TLSConfig: &tls_config,
+		TLSConfig: &tlsConfig,
 	}
 	if config.Httponly {
 		serve.ListenAndServe()
@@ -101,7 +103,7 @@ func (svc *Service) Run(cfg ServerSettings) error {
 		if err != nil {
 			panic(err)
 		}
-		tlsListener := tls.NewListener(conn, &tls_config)
+		tlsListener := tls.NewListener(conn, &tlsConfig)
 		err = serve.Serve(tlsListener)
 		if err != nil {
 			glog.Fatalf("Can not Serve TLS, caused by: %s\n", err)
