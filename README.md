@@ -84,7 +84,14 @@ The URL of the endpoint should target to howler, which you have to configure how
     http://my-howler-host:12345/events
 
 ### Backends
-Backends are the most valuable part, because you can
+Backends are components that can be plugged to implement a particular action based on the events. A backend must implement the [backend interface](./backend/backend.go) to be pluggable.
+
+Different users of Howler might have different needs in terms of backends. This could mean using a mix of different backends or implementing more. 
+To allow composability, we choose a "compilation over configuration" approach: to configure your set of backends you have to define a backend configuration similar to [this one](backendconfig/zalando.go) and select it at compile time. 
+All you have to do is the following: 
+- write a [backend config](backendconfig/zalando.go) with the appropiate [build tag](https://golang.org/pkg/go/build/)
+- use build tags to select your configuration: ```godep go install -tags YOUR_TAG github.com/zalando-techmonkeys/howler/...```
+
 
 #### Loadbalancer - F5 LTM and GTM
 F5 is a manufacturer that produces hardware loadbalancers like LTM Big
