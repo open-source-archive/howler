@@ -131,7 +131,7 @@ func (v *Vault) createSecrets(e StatusUpdateEvent) {
 	//authenticate against vault using Th howler token
 	err := vb.vaultAuthenticate(v.config["vaultURI"], v.config["vaultToken"])
 	if err != nil {
-		glog.Errorf("Cannot authenticatew with Vault.\n")
+		glog.Errorf("Cannot authenticate with Vault.\n")
 		return
 	}
 
