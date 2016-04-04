@@ -1,13 +1,16 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -119,52 +122,63 @@ func (v *Vault) HandleUpdate(e StatusUpdateEvent) {
 		glog.Infof("Task is running, creating secrets\n")
 		v.createSecrets(e)
 	}
-	//TODO: do we have to handle other status?
 }
 
 func (v *Vault) createSecrets(e StatusUpdateEvent) {
 	vb := vaultBackend{}
 	vb.appID = strings.TrimPrefix(e.Appid, "/") //Marathon specific, needed to remove initial "/" char
-
 	createChannelIfNotExistent(vb.appID)
 	//authenticate against vault using Th howler token
 	err := vb.vaultAuthenticate(v.config["vaultURI"], v.config["vaultToken"])
 	if err != nil {
-		glog.Errorf("Cannot authenticate: %s\n", err.Error())
+		glog.Errorf("Cannot authenticatew with Vault.\n")
 		return
 	}
-	//create policy for the app if non existent
-	err = vb.usePolicy(v.config["policyFile"])
-	if err != nil {
-		glog.Errorf("Cannot create new policy: %s\n", err.Error())
-		return
-	}
+
 	ttl := v.config["tokenTTL"]
 	//create token T1 using howler policy (cubbyhole token)
 	cubbyhole, err := vb.createToken(ttl)
 	if err != nil {
-		//TODO should I notify that the token creation is broken , somehow?
-		glog.Errorf("Cannot generate cubbyhole token: %s\n", err.Error())
+		glog.Errorf("Cannot generate cubbyhole token.\n")
+		return
 	}
+
+	teamName := vb.getTeamName(v.config["marathonEndpoint"], v.config["marathonUsername"], v.config["marathonPassword"])
+	if teamName == "" {
+		glog.Errorf("Cannot get team name\n")
+		return
+	}
+
+	policy, err := vb.createNewPolicy(v.config["teamPolicyFile"], teamName)
+	if err != nil {
+		glog.Errorf("Cannot create new Policy\n")
+		return
+	}
+
+	err = vb.usePolicy(policy)
+	if err != nil {
+		glog.Errorf("Cannot use generated policy:\n")
+		return
+	}
+
 	//glog.Infof("created cubbyhole: " + cubbyhole) //TODO: uncomment line for debugging. Generated tokens must not be written to files.
 	//create token T2 using app policy (secret token)
 	secretToken, err := vb.createToken(ttl)
 	if err != nil {
-		//TODO should I notify that the token creation is broken, somehow?
-		glog.Errorf("Cannot generate secret token: %s\n", err.Error())
+		glog.Errorf("Cannot generate secret token\n")
 		return
 	}
 	//glog.Infof("created secret: " + secretToken) //TODO: uncomment line for debugging. Generated tokens must not be written to files.
 	//authenticate with T1 => create a new client with that token
 	err = vb.vaultAuthenticate(v.config["vaultURI"], cubbyhole) //after that "v" is fresh and ready to auth with cubbhyhole
 	if err != nil {
-		glog.Errorf("Cannot authenticate with cubbyhole token: %s\n", err.Error())
+		glog.Errorf("Cannot authenticate with cubbyhole token\n")
 		return
 	}
 	//store secret T2 protected by cubbyhole token
 	err = vb.storeInCubbyhole(secretToken)
 	if err != nil {
-		glog.Errorf("Error while storing in cubbyhole: %s\n", err.Error())
+		glog.Errorf("Error while storing in cubbyhole\n")
 		return
 	}
 	//send token T1 in the channel (unlocks any possible waiting thread)
@@ -207,23 +221,10 @@ func (vb *vaultBackend) vaultAuthenticate(vaultURI string, token string) error {
 	return nil
 }
 
-func (vb *vaultBackend) usePolicy(filename string) error {
-	template, err := ioutil.ReadFile(filename)
-	if err != nil {
-		glog.Errorf("Cannot read policy from file %s, reason: %s.", filename, err.Error())
-		return err
-	}
-	err = vb.client.Sys().PutPolicy(vb.appID, string(template))
-	if err != nil {
-		glog.Errorf("Error putting Vault policy: %s\n", err.Error())
-		return err
-	}
-	return nil
-}
-
-//baseTemplate is a simple structure to deal with go templating
-type baseTemplate struct {
-	AppID string
+//teamTemplate is the structure used for template substitution
+type teamTemplate struct {
+	teamID string
+	appID  string
 }
 
 func (vb *vaultBackend) createToken(ttl string) (string, error) {
@@ -246,4 +247,76 @@ func (vb *vaultBackend) storeInCubbyhole(secretToken string) error {
 		return err
 	}
 	return nil
+}
+
+//createNewPolicy creates a new policy for the given team name and app. It only returns an error if it failed
+func (vb *vaultBackend) createNewPolicy(policyTemplate string, teamName string) (string, error) {
+	t, err := template.ParseFiles(policyTemplate)
+	if err != nil {
+		glog.Errorf("Cannot parse file %s with error %s\n", policyTemplate, err.Error())
+		return "", err
+	}
+	var out bytes.Buffer
+	tpl := teamTemplate{teamID: teamName, appID: vb.appID}
+	err = t.Execute(&out, tpl)
+	if err != nil {
+		glog.Errorf("Cannot execute template with error %s\n", err.Error())
+		return "", err
+	}
+	return out.String(), nil
+
+}
+
+func (vb *vaultBackend) readPolicyFile(filename string) (string, error) {
+	template, err := ioutil.ReadFile(filename)
+	if err != nil {
+		glog.Errorf("Cannot read policy from file %s, reason: %s.", filename, err.Error())
+		return "", err
+	}
+	return string(template), err
+}
+
+func (vb *vaultBackend) usePolicy(template string) error {
+	err := vb.client.Sys().PutPolicy(vb.appID, string(template))
+	if err != nil {
+		glog.Errorf("Error putting Vault policy: %s\n", err.Error())
+		return err
+	}
+	return nil
+}
+
+//calls the marathon API back to get the team name
+//assumes that the team is saved in the labels
+func (vb *vaultBackend) getTeamName(endpoint string, username string, password string) string {
+	//the call is just a plain rest call parsing for a specific field, no need to use the marathon go api here.
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", endpoint, vb.appID), nil)
+	if err != nil {
+		glog.Errorf("Cannot build request: %s\n", err.Error())
+		return ""
+	}
+	if username != "" && password != "" {
+		req.SetBasicAuth(username, password)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		glog.Errorf("Cannot GET app info from Marathon: %s\n", err.Error())
+		defer res.Body.Close()
+	}
+	body, err := ioutil.ReadAll(res.Body)
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		glog.Errorf("Cannot unmarshal data: %s\n", err.Error())
+		return ""
+	}
+
+	app := data["app"].(map[string]interface{})
+
+	labels := app["labels"].(map[string]interface{})
+	if labels["team"] != nil {
+		return labels["team"].(string)
+	}
+	return ""
 }
