@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -41,15 +43,7 @@ func mandatoryConfigCheck(config map[string]string) {
 	}
 }
 
-//Vault is the basic type
-//Example config:
-//
-//	vault:
-//        serverPort: 7777
-//        vaultURI: http://localhost:8200
-//        vaultToken: /etc/howler/vault/token
-//        tlsCertfilePath: /path/to/your/certfile
-//        tlsKeyfilePath: /path/to/your/keyfile
+//Vault is the basic type of the plugin
 type Vault struct {
 	config map[string]string
 	name   string
@@ -257,14 +251,36 @@ func (vb *vaultBackend) createNewPolicy(policyTemplate string, teamName string) 
 		return "", err
 	}
 	var out bytes.Buffer
-	tpl := teamTemplate{teamID: teamName, appID: vb.appID}
+	tpl, err := buildTemplate(teamName, vb.appID) //also does validation of parameters
+	if err != nil {
+		glog.Errorf("Cannot build a valid template: %s\n", err.Error())
+		return "", err
+	}
 	err = t.Execute(&out, tpl)
 	if err != nil {
 		glog.Errorf("Cannot execute template with error %s\n", err.Error())
 		return "", err
 	}
 	return out.String(), nil
+}
 
+//buildTemplate is a helper function that takes a teamName and an appID and returns a teamTemplate structure if parameters
+//pass the validation
+func buildTemplate(teamName string, appID string) (*teamTemplate, error) {
+	if !isStringSafe(teamName) || !isStringSafe(appID) {
+		return nil, errors.New("Invalid parameters for template.\n")
+	}
+	return &teamTemplate{teamID: teamName, appID: appID}, nil
+}
+
+//isStringSafe checks if a a string used for a template is safe
+func isStringSafe(input string) bool {
+	valid, err := regexp.MatchString("^[0-9a-zA-Z-. _\\/]+$", input)
+	if err != nil {
+		glog.Errorf("Error with regexp: %s\n", err.Error())
+		return false
+	}
+	return valid
 }
 
 func (vb *vaultBackend) readPolicyFile(filename string) (string, error) {
