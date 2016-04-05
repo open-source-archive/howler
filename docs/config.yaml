@@ -13,7 +13,11 @@ backends:
         serverPort: 7777
         vaultURI: http://localhost:8200
         vaultToken: MY_TOKEN
+        marathonUsername: USERNAME
+        marathonPassword: PASSWORD 
         policyFile: /my/path/vault_template.tpl
+        teamPolicyFile: /my/path/vault_team_template.tpl
         tokenTTL: 30m #in minutes
         tlsCertfilePath: /path/to/your/certfile
         tlsKeyfilePath: /path/to/your/keyfile
+        marathonEndpoint: http://localhost:8080/v2/apps
