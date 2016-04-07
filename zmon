@@ -1,0 +1,5 @@
+###Monitoring with ZMON
+
+[Zmon](https://github.com/zalando/zmon) is an open-source monitoring tool. Howler can manage ZMON entities that must be updated if an instance is destroyed, scheduled elsewhere, or newly created. See this diagram:
+
+![Zmon integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/monitoring.png)
