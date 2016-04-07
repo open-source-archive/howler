@@ -5,50 +5,19 @@
 [![Coverage Status](https://coveralls.io/repos/zalando-techmonkeys/howler/badge.svg?branch=master&service=github)](https://coveralls.io/github/zalando-techmonkeys/howler?branch=master)
 [![License](http://img.shields.io/badge/license-MIT-yellow.svg?style=flat)](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/LICENSE)
 
-Howler registers to events of cluster-managers
-([Marathon](https://github.com/mesosphere/marathon),
-[Kubernetes](https://github.com/kubernetes/kubernetes)) and process
-them in an event based, flexible way using different backends.
-Backends can be enabled using build flags.
+Howler is a service that listens to events posted in the [Marathon](https://github.com/mesosphere/marathon) Event Bus, processes them in arbitrary backends, and distributes them in an event-driven, flexible way. It enables you to integrate Marathon into your infrastructure via a single interface — freeing you up from having to change all of your configurations across your entire system. Using build flags, it makes enabling different backends possible.
 
-## Project Context and Features
+### Project Context and Features
+Different cluster managers offer different features. Unfortunately, some of them don't make it possible to get things to production on a "right-now"/instantaneous basis. Furthermore, if you need detailed information related to alerting and monitoring your endpoints, adding and removing load-balancer members, and/or secret distribution, you might want the ability to implement an event-driven approach that allows you to dynamically adjust your components. 
 
-In the world of cluster-managers there are several kinds of features,
-that you miss to get it in production right now. If you look into the
-details of alerting and monitoring your endpoints, adding and removing
-loadbalancer members, secret distribution, then you may want to have
-an event driven approach that can dynamically adjust your components.
-Howler provides this event driven approach in which you just add and
-delete single resources instead of rebuilding the "world".
+Howler enables you to adopt this event-driven approach. Instead of rebuilding the "world," you just add and delete single resources.
 
-### Marathon
+#### A Note on Using Bamboo
+In the [Mesos](http://mesos.apache.org/) and [Marathon](https://github.com/mesosphere/marathon) stack, at
+least two similar projects — [Bamboo](https://github.com/QubitProducts/bamboo) and [Marathon-LB](https://github.com/mesosphere/marathon-lb) — also generate a complete new HAProxy configuration, check the
+configuration, and reload the HAProxy. While testing our setup with [Bamboo](https://github.com/QubitProducts/bamboo), we realized that we wanted to have a much more dynamic tool that a) distributed events to backends, and b) that could react to them in a much more dynamic and stable way. So we created Howler. 
 
-Howler is a service which is intended to be an endpoint to receive
-events from the Marathon Event Bus and process them in arbitrary
-backends.
-
-In case of [Mesos](http://mesos.apache.org/) and
-[Marathon](https://github.com/mesosphere/marathon) stack there are at
-least two competitors
-[Bamboo](https://github.com/QubitProducts/bamboo)
-[Marathon-LB](https://github.com/mesosphere/marathon-lb), that
-basically generate a complete new HAProxy configuration, check the
-configuration and reload HAProxy. While testing the setup with
-[Bamboo](https://github.com/QubitProducts/bamboo) we realized, that we
-want to have a much more dynamic tool that distribute events to
-backends, which can react on them in a much more dynamic and stable
-way.
-
-#### Deployment concept
-
-
-### Kubernetes
-
-Currently we have no Kubernetes support, but we
-[planned](https://github.com/zalando-techmonkeys/howler/issues/9) to
-do it.
-
-## Requirements
+### Requirements
 
 You need to have a running [Mesos](http://mesos.apache.org/)-[Marathon](https://github.com/mesosphere/marathon)
 setup and [Go](https://golang.org/) installed on your desk.
