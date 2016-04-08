@@ -10,7 +10,7 @@ Howler is a service that listens to events posted in the [Marathon](https://gith
 ###Project Context and Features
 Different cluster managers offer different features. Unfortunately, some of them don't support getting things to production on a "right-now"/instantaneous basis. 
 
-Furthermore, you might need detailed information related to alerting and monitoring your endpoints, adding and removing load-balancer members, and/or secret distribution. In that case, implementing an event-driven approach that allows you to dynamically adjust your components is generally a good idea. 
+Furthermore, you might need detailed information related to alerting and monitoring your endpoints, adding and removing load-balancer members, and/or secret distribution. In that case, implementing an event-driven approach that allows you to dynamically adjust your components is generally a good idea.
 
 Howler enables you to adopt this event-driven approach. Instead of rebuilding the "world," you just add and delete single resources.
 
@@ -100,14 +100,14 @@ To use Vault with Howler, you need:
 Howler-vault includes a rootToken to create policies for applications, cubbyhole tokens, and secret-tokens, and to read/write into cubbyhole.
 
 A goroutine per deployment instance will:
-- create policies for new applications and write them to Vault
-- create cubbyhole tokens
-- create secret-tokens with policies
-- authenticate with cubbyhole tokens (shared) to Vault
-- write secret-tokens into cubbyhole/sharedsecret. Cubbyhole stores secrets per token, so the same path for everyone is ok
-- creates an HTTPS endpoint for the upcoming Docker host
-- waits for the newly deployed Docker host and responds with its cubbyhole token. The requester may be an init script within Docker)
-- terminates goroutine
+1. create policies for new applications and write them to Vault
+2. create cubbyhole tokens
+3. create secret-tokens with policies
+4. authenticate with cubbyhole tokens (shared) to Vault
+5. write secret-tokens into cubbyhole/sharedsecret. Cubbyhole stores secrets per token, so the same path for everyone is ok
+6. create an HTTPS endpoint for the upcoming Docker host
+7. wait for the newly deployed Docker host and respond with its cubbyhole token. The requester may be an init script within Docker)
+8. terminates goroutine
 
 #####Init Script
 The init script receives a cubbyhole token that it can use to authenticate to Vault. Here are the required steps you must take within the init script:
