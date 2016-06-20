@@ -61,7 +61,7 @@ The URL of the endpoint should target Howler. Configure Howler and Marathon acco
 
 Howler users will vary in their backend-related needs. One approach is to mix different backends; another is to implement a greater number of backends. 
 
-To allow composability, one can choose a "compilation over configuration" approach:
+To allow composability, we chose a "compilation over configuration" approach:
 - define/write a backend configuration similar to [this one](backendconfig/zalando.go) 
 - Include the appropriate [build tag](https://golang.org/pkg/go/build/) to select your configuration: ```godep go install -tags YOUR_TAG github.com/zalando-techmonkeys/howler/...```
 - Select the configuration at compile time 
@@ -77,8 +77,7 @@ Have a look at the [dummy backend](backend/dummy.go) for an example.
 ####Load Balancing
 [F5](https://f5.com/) produces hardware load balancers like [LTM Big-IP](https://f5.com/products/modules/local-traffic-manager) and [GTM](https://f5.com/products/modules/global-traffic-manager), a smart DNS server.
 
-This diagram shows how to combine LTM Big-IP and GTM DNS server integration with [baboon-proxy](https://github.com/zalando-techmonkeys/baboon-proxy) (currently the most feature-complete F5 RESTful API available) and
-[chimp](https://github.com/zalando-techmonkeys/chimp), a PAAS-style deployment tool:
+This diagram shows how to combine LTM Big-IP and GTM DNS server integration with [baboon-proxy](https://github.com/zalando-techmonkeys/baboon-proxy) (currently the most feature-complete F5 RESTful API available)
 
 ![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.png)
 
