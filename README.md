@@ -7,24 +7,28 @@
 
 Howler is a service that listens to events posted in the [Marathon](https://github.com/mesosphere/marathon) Event Bus, processes them in arbitrary backends, and distributes them in an event-driven, flexible way. It enables you to integrate Marathon into your infrastructure via a single interface — freeing you up from having to change all of your configurations across your entire system. Using build flags, it makes enabling different backends possible.
 
-### Project Context and Features
-Different cluster managers offer different features. Unfortunately, some of them don't make it possible to get things to production on a "right-now"/instantaneous basis. Furthermore, if you need detailed information related to alerting and monitoring your endpoints, adding and removing load-balancer members, and/or secret distribution, you might want the ability to implement an event-driven approach that allows you to dynamically adjust your components. 
+###Project Context and Features
+Different cluster managers offer different features. Unfortunately, some of them don't support getting things to production on a "right-now"/instantaneous basis. 
+
+Furthermore, you might need detailed information related to alerting and monitoring your endpoints, adding and removing load-balancer members, and/or secret distribution. In that case, implementing an event-driven approach that allows you to dynamically adjust your components is generally a good idea.
 
 Howler enables you to adopt this event-driven approach. Instead of rebuilding the "world," you just add and delete single resources.
 
 #### A Note on Using Bamboo
 In the [Mesos](http://mesos.apache.org/) and [Marathon](https://github.com/mesosphere/marathon) stack, at
-least two similar projects — [Bamboo](https://github.com/QubitProducts/bamboo) and [Marathon-LB](https://github.com/mesosphere/marathon-lb) — also generate a complete new HAProxy configuration, check the
+least two similar projects — [Bamboo](https://github.com/QubitProducts/bamboo) and [Marathon-LB](https://github.com/mesosphere/marathon-lb) — generate a complete new HAProxy configuration, check the
 configuration, and reload the HAProxy. While testing our setup with [Bamboo](https://github.com/QubitProducts/bamboo), we realized that we wanted to have a much more dynamic tool that a) distributed events to backends, and b) that could react to them in a much more dynamic and stable way. So we created Howler. 
 
-### Requirements
+###Basic Requirements
 
-You need to have a running [Mesos](http://mesos.apache.org/)-[Marathon](https://github.com/mesosphere/marathon)
-setup and [Go](https://golang.org/) installed on your desk.
+To start using Howler, you'll need:
+- a running [Mesos](http://mesos.apache.org/)-[Marathon](https://github.com/mesosphere/marathon)
+setup 
+- [Go](https://golang.org/)
 
-## Install
+### Installation
 
-Assuming you've installed Go on your desk and a GOPATH environment variable, run this:
+Once you've installed Go and a GOPATH environment variable, run this:
 
 ```bash
 # install godep if you don't have it
@@ -42,94 +46,74 @@ godep go install -tags zalando -ldflags "-X main.Buildstamp=`date -u '+%Y-%m-%d_
 
 This should compile the server binary `howler` and put it into $GOBIN, which you can put in `/usr/bin/` and start with this [init-script](howler.init.d).
 
-## Usage
+### Usage
 
-Configure Marathon to send events to howler.
-The URL of the endpoint should target to howler, which you have to configure howler and marathon accordingly:
+####Configuring Marathon to Send Events to Howler
+The URL of the endpoint should target Howler. Configure Howler and Marathon accordingly:
 
     [marathon-host]% cat /etc/marathon/conf/event_subscriber
     http_callback
     [marathon-host]% cat /etc/marathon/conf/http_endpoints
     http://my-howler-host:12345/events
 
-### Backends
-Backends are components that can be plugged to implement a particular action based on the events. A backend must implement the [backend interface](./backend/backend.go) to be pluggable.
+###Backends
+[Backends](./backend) are components that you can plug in to process events coming from Marathon, and to implement particular actions based on these events. To be pluggable, a backend *must* implement the [backend interface](./backend/backend.go). Howler's usefulness depends on backends.  
 
-Different users of Howler might have different needs in terms of backends. This could mean using a mix of different backends or implementing more. 
-To allow composability, we choose a "compilation over configuration" approach: to configure your set of backends you have to define a backend configuration similar to [this one](backendconfig/zalando.go) and select it at compile time. 
-All you have to do is the following: 
-- write a [backend config](backendconfig/zalando.go) with the appropiate [build tag](https://golang.org/pkg/go/build/)
-- use build tags to select your configuration: ```godep go install -tags YOUR_TAG github.com/zalando-techmonkeys/howler/...```
+Howler users will vary in their backend-related needs. One approach is to mix different backends; another is to implement a greater number of backends. 
 
+To allow composability, we chose a "compilation over configuration" approach:
+- define/write a backend configuration similar to [this one](backendconfig/zalando.go) 
+- Include the appropriate [build tag](https://golang.org/pkg/go/build/) to select your configuration: ```godep go install -tags YOUR_TAG github.com/zalando-techmonkeys/howler/...```
+- Select the configuration at compile time 
 
-#### Loadbalancer - F5 LTM and GTM
-F5 is a manufacturer that produces hardware loadbalancers like LTM Big
-IP and GTM a smart DNS server.
+The following Marathon event types are currently dispatched and processed by the respective methods:
 
-LTM loadbalancer and GTM DNS server integration, also
-shows
-[baboon-proxy](https://github.com/zalando-techmonkeys/baboon-proxy),
-the most feature complete F5 RESTful API, and
-[chimp](https://github.com/zalando-techmonkeys/chimp), a PAAS
-style deployment tool:
+- [api_post_event](http://mesosphere.github.io/marathon/docs/event-bus.html#api-request), handled by `HandleCreate()`
+- [status_update_event](http://mesosphere.github.io/marathon/docs/event-bus.html#status-update), handled by `HandleUpdate()`
+- [app_terminated_event](https://github.com/mesosphere/marathon/issues/1530), handled by `HandleDestroy()`
+
+Have a look at the [dummy backend](backend/dummy.go) for an example.
+
+####Load Balancing
+[F5](https://f5.com/) produces hardware load balancers like [LTM Big-IP](https://f5.com/products/modules/local-traffic-manager) and [GTM](https://f5.com/products/modules/global-traffic-manager), a smart DNS server.
+
+This diagram shows how to combine LTM Big-IP and GTM DNS server integration with [baboon-proxy](https://github.com/zalando-techmonkeys/baboon-proxy) (currently the most feature-complete F5 RESTful API available)
 
 ![LTM/GTM integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/Loadbalancer_ltm_gtm_integration.png)
 
-#### Monitoring - Zmon
-[Zmon](https://github.com/zalando/zmon) is an Open Source monitoring
-tool.  Howler can manage Zmon entities that need to be updated if an
-instance is destroyed, scheduled somewhere else or newly created.
+####Secret Distribution with Vault
+[Vault](https://github.com/hashicorp/vault) is a tool for managing secrets. With Howler, you can create a new deployed instance with its secrets maintained by [vault](https://github.com/hashicorp/vault). 
 
-![Zmon integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/monitoring.png)
+Howler's backend for Vault is still under development, but farther along than [the others underway](https://github.com/zalando-techmonkeys/howler/tree/master/backend). It uses [coprocess](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html), Vault's cubbyhole approach.
+This means that Howler will provide you with secrets, but only if the requester (in most cases, your init script) can provide the shared cubbyhole token.
 
-#### Secret Distribution - vault
-[vault](https://github.com/hashicorp/vault) is a tool for managing
-secrets.
-
-Howler can help you to provide a new deployed instance with it's
-secrets maintained by [vault](https://github.com/hashicorp/vault).
-
-This backend is currently under development.
-
-The idea is a bit more completed than the other backends. It uses
-vault's cubbyhole approach called
-[coprocess](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html).
-This means howler will provide you with secrets, only if the requester
-(in most cases your init script) can provide the shared cubbyhole token.
-
-The picture shows the steps of secret distribution and the
-responsibilities of howler and other components.
+This diagram illustrates the steps of secret distribution, and the roles of Howler and other components:
 ![Secret distribution integration](https://raw.githubusercontent.com/zalando-techmonkeys/howler/master/docs/secrets-distribution-vault.png)
 
-##### Requirements Vault
-- You need to have a running and unsealed vault
-- You need to have "secret" and "cubbyhole" vault backends.
+#####Requirements
+To use Vault with Howler, you need:
+- a running and unsealed vault
+- "secret" and "cubbyhole" Vault backends
 
-##### Howler-vault backend
-Howler-vault has a rootToken to create policies for applications,
-create cubbyhole-tokens, secret-tokens, read/write into cubbyhole.
+#####Howler-Vault Backend
+Howler-vault includes a rootToken to create policies for applications, cubbyhole tokens, and secret-tokens, and to read/write into cubbyhole.
 
-A goroutine per deployment-instance will:
+A goroutine per deployment instance will:
+1. create policies for new applications and write them to Vault
+2. create cubbyhole tokens
+3. create secret-tokens with policies
+4. authenticate with cubbyhole tokens (shared) to Vault
+5. write secret-tokens into cubbyhole/sharedsecret. Cubbyhole stores secrets per token, so the same path for everyone is ok
+6. create an HTTPS endpoint for the upcoming Docker host
+7. wait for the newly deployed Docker host and respond with its cubbyhole token. The requester may be an init script within Docker)
+8. terminates goroutine
 
-1. Create policies for new applications and write them to vault
-1. Create cubbyhole-token
-1. Create secret-token with policy
-1. Authenticate with cubbyhole token (shared) to vault
-1. Write secret-token into cubbyhole/sharedsecret. Cubbyhole stores
-   secrets per token, that means same path for everyone is ok.
-1. Create an https endpoint for the upcoming docker-host.
-1. Wait for the newly deployed docker-host and respond with it's
-   cubbyhole token (Requester may be an init script within docker)
-1. terminate goroutine
+#####Init Script
+The init script receives a cubbyhole token that it can use to authenticate to Vault. Here are the required steps you must take within the init script:
 
-##### Init Script
-The init script got now a cubbyhole token which it will use to
-authenticate to vault. These are the steps that you have to do within
-the init script:
-
-1. Authenticate with cubbyhole-token to vault
+1. Authenticate with the cubbyhole token to Vault
 1. Read the secret token from cubbyhole/sharedsecret
-1. Authenticate with secret-token to vault
+1. Authenticate with secret-token to Vault
 1. Read application secrets from secret/&lt;marathon-appID&gt;
 
 ### Sample Config
@@ -154,46 +138,27 @@ backends:
         Password: Secr3tP4ss
 ```
 
-## Developement
+### Contributing/TODO
+We welcome contributions from the community; just submit a pull request. To help you get started, here are some items that we'd love help with:
 
-To be actually useful, there have to be [backends](./backend) which
-process the events coming from marathon in some way. All of these
-backends have to fulfill the [`Backend` interface](backend/backend.go).
-Following Marathon event types are currently dispatched and processed
-by the respective methods:
+- Adding Kubernetes (another cluster manager) as an event source
+- Writing unit tests. This [talk](https://speakerdeck.com/mitchellh/advanced-testing-with-go) can help you get started.
+- Implementing an example init script to show a working secret distribution with Vault backend
+- Cleaning up the code base.
 
-- [api_post_event](http://mesosphere.github.io/marathon/docs/event-bus.html#api-request), handled by `HandleCreate()`
-- [status_update_event](http://mesosphere.github.io/marathon/docs/event-bus.html#status-update), handled by `HandleUpdate()`
-- [app_terminated_event](https://github.com/mesosphere/marathon/issues/1530), handled by `HandleDestroy()`
+Please use GitHub Issues as a starting point for contributions, new ideas or bugreports.
 
-Have a look on the [dummy backend](backend/dummy.go) for an example.
-
-## Contributing/TODO
-
-We welcome contributions from the community; just submit a pull
-request. To help you get started, here are some items that we'd love
-help with:
-
-- add Kubernetes (another Cluster-Manager) as event source
-- write unit tests: this [talk](https://speakerdeck.com/mitchellh/advanced-testing-with-go) can help to do this.
-- implement example init script to show a working secret distribution
-  with vault backend
-- the code base
-
-Please use github issues as starting point for contributions, new
-ideas or bugreports.
-
-## Contact
+### Contact
 
 * E-Mail: team-techmonkeys@zalando.de
 * IRC on freenode: #zalando-techmonkeys
 
-## Contributors
+### Contributors
 
 Thanks to:
 
 - &lt;your name&gt;
 
-## License
+### License
 
 See [LICENSE](LICENSE) file.
